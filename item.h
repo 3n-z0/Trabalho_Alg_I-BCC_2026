@@ -1,5 +1,6 @@
 #ifndef ITEM_H
     #define ITEM_H
+    #include <stdbool.h>
     
     typedef struct item_ ITEM;
 
