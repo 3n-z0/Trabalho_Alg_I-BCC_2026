@@ -40,9 +40,9 @@ struct item_
 };
 
 ITEM *item_criar(
-char asteroid_designation[11],
-char asteroid_fullname[35],
-char close_approach_date[20],
+const char asteroid_designation[11],
+const char asteroid_fullname[35],
+const char close_approach_date[20],
 unsigned int year,
 unsigned int month,
 double distance_au,
@@ -53,10 +53,10 @@ bool is_past_event,
 bool is_future_event,
 double risk_score,
 unsigned int panic_level,
-char threat_category[10],
-char panic_verdict[35],
+const char threat_category[10],
+const char panic_verdict[35],
 bool on_sentry_list,
-char sentry_impact_prob[21],
+const char sentry_impact_prob[21],
 float sentry_torino_scale,
 float sentry_palermo_scale,
 float sentry_diameter_km){
@@ -231,3 +231,4 @@ float item_get_sentry_diameter_km(const ITEM *item) {
     }
     return item->sentry_info->sentry_diameter_km;
 }
+
