@@ -3,189 +3,149 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+
 typedef struct celula_
 {
     struct celula_ *direita, *abaixo;
     ITEM *item;
-    int linha, coluna;
 }CELULA;
 
+typedef struct cabecalho_ {
+    char chave[64];
+    CELULA *primeiro;
+    CELULA *ultimo;
+    struct cabecalho_ *prox;
+} CABECALHO;
 
 struct lista_cruz_
 {
-    CELULA **linhas, **colunas;
-    int nlinhas, ncolunas;
+    CABECALHO *linhas, *colunas;
+    int qtd_itens;
 };
 
-LISTA_CRUZ *lista_cruz_criar(int nlinhas, int ncolunas){
-    if(nlinhas > 0 && ncolunas > 0){
-        LISTA_CRUZ *lista_cruz = (LISTA_CRUZ*)malloc(sizeof(LISTA_CRUZ));
-        if(lista_cruz != NULL){
-            CELULA **linhas = (CELULA**)calloc(nlinhas, sizeof(CELULA*));
-            CELULA **colunas = (CELULA**)calloc(ncolunas, sizeof(CELULA*));
-            if(linhas != NULL && colunas != NULL){
-                lista_cruz->linhas = linhas;
-                lista_cruz->colunas = colunas;
-                lista_cruz->nlinhas = nlinhas;
-                lista_cruz->ncolunas = ncolunas;
-                return lista_cruz;
-            }
-            free(linhas);
-            free(colunas);
-            free(lista_cruz);
-        }
-    }
-    return NULL;
+
+LISTA_CRUZ *lista_cruz_criar(void){
+    LISTA_CRUZ *lc = (LISTA_CRUZ*)malloc(sizeof(LISTA_CRUZ));
+    if(lc == NULL) return NULL;
+    lc->linhas = NULL;
+    lc->colunas = NULL;
+    lc->qtd_itens = 0;
+    return lc;
 }
 
-static void celula_apagar(CELULA **celula){
-    if(celula != NULL && *celula != NULL){
-        item_apagar(&(*celula)->item);
-        free(*celula);
-        *celula = NULL;
-    }
-}
+static CABECALHO *criar_ou_encontrar_cabecalho(CABECALHO **lista_cabecalhos, const char* chave){
+    if(chave == NULL) return NULL;
 
-static void lista_cruz_inserir_linha(CELULA **linha, CELULA *celula){
-    if(linha[celula->linha] == NULL){
-        linha[celula->linha] = celula;
-        return;
-    }
-    if(linha[celula->linha]->coluna > celula->coluna){
-        celula->direita = linha[celula->linha];
-        linha[celula->linha] = celula;
-        return;
-    }
-    CELULA *atual = linha[celula->linha];
+    CABECALHO *atual = *lista_cabecalhos;
+    CABECALHO *anterior = NULL;
+
     while(atual != NULL){
-        if(atual->direita == NULL){
-            atual->direita = celula;
-            break;
+        if(strcmp(chave, atual->chave) == 0){
+            return atual;
         }
-        if(celula->coluna < atual->direita->coluna){
-            celula->direita = atual->direita;
-            atual->direita = celula;
-            break;
-        }
-        
-        atual = atual->direita;
+        anterior = atual;
+        atual = atual->prox;
     }
+
+    CABECALHO *novo = (CABECALHO*)malloc(sizeof(CABECALHO));
+
+    if(novo == NULL) return NULL;
+
+    strncpy(novo->chave, chave, sizeof(novo->chave) - 1);
+    novo->chave[sizeof(novo->chave) - 1] = '\0';
+    novo->primeiro = NULL;
+    novo->ultimo = NULL;
+    novo->prox = NULL;
+
+    if(*lista_cabecalhos == NULL){
+        *lista_cabecalhos = novo;
+    }
+    else{
+        anterior->prox = novo;
+    }
+    return novo;
 }
 
-static void lista_cruz_inserir_coluna(CELULA **coluna, CELULA *celula){
-    if(coluna[celula->coluna] == NULL){
-        coluna[celula->coluna] = celula;
-        return;
+bool lista_cruz_inserir(LISTA_CRUZ *lc, ITEM *item, const char* lin, const char* col){
+    if(lc == NULL || item == NULL || lin == NULL || col == NULL) return false;
+
+    CABECALHO *cab_lin = criar_ou_encontrar_cabecalho(&lc->linhas,lin);
+    CABECALHO *cab_col = criar_ou_encontrar_cabecalho(&lc->colunas,col);
+
+    if(cab_lin == NULL || cab_col == NULL) return false;
+
+
+    CELULA *novo = (CELULA*)malloc(sizeof(CELULA));
+    if(novo == NULL) return false;
+
+    novo->item = item;
+    novo->direita = NULL;
+    novo->abaixo = NULL;
+
+    if(cab_lin->ultimo == NULL){
+        cab_lin->primeiro = novo;
     }
-    if(coluna[celula->coluna]->linha > celula->linha){
-        celula->abaixo = coluna[celula->coluna];
-        coluna[celula->coluna] = celula;
-        return;
+    else{
+        cab_lin->ultimo->direita = novo;
     }
-    CELULA *atual = coluna[celula->coluna];
-    while(atual != NULL){
-        if(atual->abaixo == NULL){
-            atual->abaixo = celula;
-            break;
-        }
-        if(celula->linha < atual->abaixo->linha){
-            celula->abaixo = atual->abaixo;
-            atual->abaixo = celula;
-            break;
-        }
-        
-        atual = atual->abaixo;
+    cab_lin->ultimo = novo;
+
+    if(cab_col->ultimo == NULL){
+        cab_col->primeiro = novo;
     }
+    else{
+        cab_col->ultimo->abaixo = novo;
+    }
+    cab_col->ultimo = novo;
+
+    lc->qtd_itens++;
+
+    return true;
 }
 
-bool lista_cruz_inserir(LISTA_CRUZ *matriz, ITEM *item, int linha, int coluna){
-    if(matriz != NULL && item != NULL && linha >= 0 && coluna >= 0 && linha < matriz->nlinhas && coluna < matriz->ncolunas){
-        CELULA *celula = (CELULA*)malloc(sizeof(CELULA));
-        if(celula != NULL){
-            celula->item = item;
-            celula->linha = linha;
-            celula->coluna = coluna;
-            celula->abaixo = NULL;
-            celula->direita = NULL;
-            lista_cruz_inserir_linha(matriz->linhas, celula);
-            lista_cruz_inserir_coluna(matriz->colunas, celula);
-            return true;
-        }
-    }
-    return false;
-}
+void lista_cruz_apagar(LISTA_CRUZ **lc){
+    if(lc == NULL || *lc == NULL) return;
 
-ITEM* lista_cruz_remover(LISTA_CRUZ *matriz, int linha, int coluna){
-    if(matriz != NULL && linha >= 0 && coluna >= 0 && linha < matriz->nlinhas && coluna < matriz->ncolunas){
-        CELULA *apaga = NULL;
-        CELULA *anterior = NULL;
-        apaga = matriz->linhas[linha];
-        if(apaga == NULL){
-            return NULL;
-        }
-        if(matriz->linhas[linha]->coluna == coluna){
-            matriz->linhas[linha] = matriz->linhas[linha]->direita;
-        }
-        else{
-            while(apaga != NULL){
-                if(apaga->coluna == coluna){
-                    anterior->direita = apaga->direita;
-                    break;
-                }
-                else if(apaga->coluna > coluna){
-                    break;
-                }
-            anterior = apaga;
-            apaga = apaga->direita;
-            }
-        }
-        apaga = matriz->colunas[coluna];
-        anterior = NULL;
-        if(apaga == NULL){
-            return NULL;
-        }
-        if(matriz->colunas[coluna]->linha == linha){
-            matriz->colunas[coluna] = matriz->colunas[coluna]->abaixo;
-        }
-        else{
-            while(apaga != NULL){
-                if(apaga->linha == linha){
-                    anterior->abaixo = apaga->abaixo;
-                    break;
-                }
-                else if(apaga->linha > linha){
-                    apaga = NULL;
-                    break;
-                }
-            anterior = apaga;
-            apaga = apaga->abaixo;
-            }
-        }
-        if(apaga != NULL){
-            ITEM *item = apaga->item;
+    CABECALHO *lin = (*lc)->linhas;
+
+    while(lin != NULL){
+        CELULA *cel = lin->primeiro;
+        while(cel != NULL){
+            CELULA *apaga = cel;
+            cel = cel->direita;
+
             free(apaga);
-            return item;
         }
+
+        CABECALHO *apaga = lin;
+        lin = lin->prox;
+        free(apaga);
     }
-    return NULL;
+    
+    CABECALHO *col = (*lc)->colunas;
+    while(col){
+        CABECALHO *apaga = col;
+        col = col->prox;
+
+        free(apaga);
+    }
+
+    free(*lc);
+    *lc = NULL;
 }
 
-void lista_cruz_apagar(LISTA_CRUZ **matriz){
-    if(matriz != NULL && (*matriz) != NULL){
-        CELULA *atual = NULL;
-        CELULA *apagar = NULL;
-        for(int i = 0; i < (*matriz)->nlinhas; i++){
-            atual = (*matriz)->linhas[i];
-            while(atual != NULL){
-                apagar = atual;
-                atual = atual->direita;
-                celula_apagar(&apagar);
-            }
-        }
-        free((*matriz)->linhas);
-        free((*matriz)->colunas);
+void lista_cruz_percorrer(const LISTA_CRUZ *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
+    if(lc == NULL || visita == NULL) return NULL;
 
-        free(*matriz);
-        *matriz = NULL;
+    CABECALHO *lin = lc->linhas;
+
+    while(lin != NULL){
+        CELULA *atual = lin->primeiro;
+        while(atual != NULL){
+            visita(atual->item, ctx);
+            atual = atual->direita;
+        }
+        lin = lin->prox;
     }
 }

@@ -20,3 +20,8 @@ static void processa_item(ITEM *item, void *ctx){
     ContextoBusca *c = (ContextoBusca*) ctx;
     double sim = 0.0;
 }
+
+static void destruir_item_cb(ITEM *item, void *ctx) {
+    (void) ctx; //ignora o contexto não utilizado
+    item_apagar(&item); //destrói o ITEM
+}

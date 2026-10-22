@@ -96,17 +96,4 @@ bool lista_cabeca_inserir_inicio(LISTA_CABECA *lista_cabeca, ITEM *item){
     return true;
 }
 
-ITEM *lista_cabeca_buscar_item(const LISTA_CABECA *lista_cabeca, CRITERIO_BUSCA criterio, void *contexto){
-    if(lista_cabeca == NULL || criterio == NULL || contexto == NULL){
-        return NULL;
-    }
-    NO *atual = lista_cabeca->cabeca->prox;
-    while(atual != NULL){
-        if(criterio(atual->item, contexto)){
-            return atual->item;
-        }
-        atual = atual->prox;
-    }
-    return NULL;
-}
 

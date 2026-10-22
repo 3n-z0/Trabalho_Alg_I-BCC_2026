@@ -11,6 +11,4 @@
     void lista_cabeca_apagar(LISTA_CABECA **lista_cabeca);
     bool lista_cabeca_inserir_fim(LISTA_CABECA *lista_cabeca, ITEM *item);
     bool lista_cabeca_inserir_inicio(LISTA_CABECA *lista_cabeca, ITEM *item);
-    ITEM *lista_cabeca_buscar_item(const LISTA_CABECA *lista_cabeca, CRITERIO_BUSCA criterio, void *contexto);
-
 #endif
