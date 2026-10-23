@@ -46,7 +46,6 @@ void lista_cabeca_apagar(LISTA_CABECA **lista_cabeca){
         apaga = atual;
         atual = atual->prox;
 
-        item_apagar(&apaga->item);
         free(apaga);
         apaga = NULL;
     }
@@ -94,6 +93,17 @@ bool lista_cabeca_inserir_inicio(LISTA_CABECA *lista_cabeca, ITEM *item){
     no->prox = lista_cabeca->cabeca->prox;
     lista_cabeca->cabeca->prox = no;
     return true;
+}
+
+void lista_cabeca_percorrer(LISTA_CABECA *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
+    if(lc == NULL || lc->cabeca == NULL || visita == NULL) return;
+
+    NO *atual = lc->cabeca->prox;
+    while(atual != NULL){
+        visita(atual->item, ctx);
+        atual = atual->prox;
+    } 
+    return;
 }
 
 
