@@ -231,3 +231,94 @@ float item_get_sentry_diameter_km(const ITEM *item) {
     }
     return item->sentry_info->sentry_diameter_km;
 }
+
+void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t tam_dest) {
+    if (item == NULL || campo == NULL || dest == NULL || tam_dest == 0) return;
+
+    // --- CAMPOS DE TEXTO ---
+    if (strcmp(campo, "threat_category") == 0) {
+        const char *val = item_get_threat_category(item);
+        snprintf(dest, tam_dest, "%s", val ? val : "N/A");
+    }
+    else if (strcmp(campo, "panic_verdict") == 0) {
+        const char *val = item_get_panic_verdict(item);
+        snprintf(dest, tam_dest, "%s", val ? val : "N/A");
+    }
+    else if (strcmp(campo, "asteroid_designation") == 0) {
+        const char *val = item_get_asteroid_designation(item);
+        snprintf(dest, tam_dest, "%s", val ? val : "N/A");
+    }
+    else if (strcmp(campo, "asteroid_fullname") == 0) {
+        const char *val = item_get_asteroid_fullname(item);
+        snprintf(dest, tam_dest, "%s", val ? val : "N/A");
+    }
+    else if (strcmp(campo, "close_approach_date") == 0) {
+        const char *val = item_get_close_approach_date(item);
+        snprintf(dest, tam_dest, "%s", val ? val : "N/A");
+    }
+    else if (strcmp(campo, "sentry_impact_prob") == 0) {
+        const char *prob = item_get_sentry_impact_prob(item);
+        snprintf(dest, tam_dest, "%s", prob ? prob : "N/A");
+    }
+
+    // --- CAMPOS INTEIROS E BOOLEANOS ---
+    else if (strcmp(campo, "year") == 0) {
+        snprintf(dest, tam_dest, "%u", item_get_year(item));
+    }
+    else if (strcmp(campo, "month") == 0) {
+        snprintf(dest, tam_dest, "%u", item_get_month(item));
+    }
+    else if (strcmp(campo, "panic_level") == 0) {
+        snprintf(dest, tam_dest, "%u", item_get_panic_level(item));
+    }
+    else if (strcmp(campo, "days_until_approach") == 0) {
+        snprintf(dest, tam_dest, "%d", item_get_days_until_approach(item));
+    }
+    else if (strcmp(campo, "is_future_event") == 0) {
+        snprintf(dest, tam_dest, "%s", item_get_is_future_event(item) ? "true" : "false");
+    }
+    else if (strcmp(campo, "is_past_event") == 0) {
+        snprintf(dest, tam_dest, "%s", item_get_is_past_event(item) ? "true" : "false");
+    }
+    else if (strcmp(campo, "on_sentry_list") == 0) {
+        snprintf(dest, tam_dest, "%s", item_get_on_sentry_list(item) ? "true" : "false");
+    }
+
+    // --- CAMPOS FLUTUANTES (DOUBLES E FLOATS) ---
+    else if (strcmp(campo, "distance_au") == 0) {
+        snprintf(dest, tam_dest, "%.4f", item_get_distance_au(item));
+    }
+    else if (strcmp(campo, "velocity_km_s") == 0) {
+        snprintf(dest, tam_dest, "%.2f", item_get_velocity_km_s(item));
+    }
+    else if (strcmp(campo, "risk_score") == 0) {
+        snprintf(dest, tam_dest, "%.4f", item_get_risk_score(item));
+    }
+    else if (strcmp(campo, "absolute_magnitude") == 0) {
+        snprintf(dest, tam_dest, "%.2f", item_get_absolute_magnitude(item));
+    }
+    else if (strcmp(campo, "sentry_torino_scale") == 0) {
+        if (!item_get_on_sentry_list(item)) {
+            snprintf(dest, tam_dest, "N/A");
+        } else {
+            snprintf(dest, tam_dest, "%.1f", item_get_sentry_torino_scale(item));
+        }
+    }
+    else if (strcmp(campo, "sentry_palermo_scale") == 0) {
+        if (!item_get_on_sentry_list(item)) {
+            snprintf(dest, tam_dest, "N/A");
+        } else {
+            snprintf(dest, tam_dest, "%.2f", item_get_sentry_palermo_scale(item));
+        }
+    }
+    else if (strcmp(campo, "sentry_diameter_km") == 0) {
+        if (!item_get_on_sentry_list(item)) {
+            snprintf(dest, tam_dest, "N/A");
+        } else {
+            snprintf(dest, tam_dest, "%.3f", item_get_sentry_diameter_km(item));
+        }
+    }
+    else {
+        snprintf(dest, tam_dest, "DESCONHECIDO");
+    }
+}

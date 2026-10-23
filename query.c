@@ -56,6 +56,10 @@ static double extrair_valor_numerico(ITEM *item, const char *campo){
     if (strcmp(campo, "absolute_magnitude") == 0) return (double) item_get_absolute_magnitude(item);
     if (strcmp(campo, "panic_level") == 0) return (double) item_get_panic_level(item);
 
+    if (strcmp(campo, "sentry_torino_scale") == 0) return (double) item_get_sentry_torino_scale(item);
+    if (strcmp(campo, "sentry_palermo_scale") == 0) return (double) item_get_sentry_palermo_scale(item);
+    if (strcmp(campo, "sentry_diameter_km") == 0) return (double) item_get_sentry_diameter_km(item);
+
     return 0.0;
 }
 
@@ -77,6 +81,8 @@ static const char *extrair_valor_string(const ITEM *item, const char *campo){
     if (strcmp(campo, "asteroid_designation") == 0) return item_get_asteroid_designation(item);
     if (strcmp(campo, "asteroid_fullname") == 0) return item_get_asteroid_fullname(item);
     if (strcmp(campo, "close_approach_date") == 0) return item_get_close_approach_date(item);
+
+    if (strcmp(campo, "sentry_impact_prob") == 0) return item_get_sentry_impact_prob(item);
 
     return NULL;
 }
@@ -174,7 +180,7 @@ QUERY *query_criar(const char *dados_query){
     return query;
 }
 
-bool query_avaliar(QUERY *query, ITEM *item, float *sim){
+bool query_avaliar(ITEM *item, QUERY *query, float *sim){
     if(query == NULL || item == NULL) return false;
 
     RegraFiltro *regra_atual = query->regra_filtro;
@@ -267,3 +273,26 @@ void query_apagar(QUERY **query){
     *query = NULL;
 }
 
+const char *query_get_cross_campo1(QUERY *query){
+    if(query == NULL) return NULL;
+
+    return query->cross_campo1;
+}
+
+const char *query_get_cross_campo2(QUERY *query){
+    if(query == NULL) return NULL;
+
+    return query->cross_campo2;
+}
+
+const char *query_get_group_campo1(QUERY *query){
+    if(query == NULL) return NULL;
+
+    return query->group_campo1;
+}
+
+const char *query_get_group_campo2(QUERY *query){
+    if(query == NULL) return NULL;
+
+    return query->group_campo2;
+}

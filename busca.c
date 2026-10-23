@@ -7,18 +7,77 @@
 #include "pilha.h"
 #include "lista_seq.h"
 #include "lista_cabeca.h"
+#include "lista_cruz.h"
 
+typedef enum {
+    RESULT_PILHA,
+    RESULT_FILA,
+    RESULT_LISTA_SEQ,
+    RESULT_LISTA_ENC,
+    RESULT_LISTA_CABECA,
+    RESULT_LISTA_ORD,
+    RESULT_LISTA_GEN,
+    RESULT_LISTA_CRUZ
+} TipoResultado;
 
-typedef struct{
+typedef struct {
     QUERY *query;
-    void *estrutura_resultado;
-    const char *tipo_resultado;
-    int item_obtidos;
-}ContextoBusca;
+    void *resultado;
+    TipoResultado tipo_res;
+} ContextoBusca;
+
+static void inserir_resultado(ITEM *item, void *ctx, float sim){
+    ContextoBusca *c = (ContextoBusca*) ctx;
+
+    if(item == NULL || c == NULL) return;
+
+    switch(c->tipo_res){
+        case RESULT_PILHA:
+            pilha_empilhar((PILHA*)c->resultado, item);
+            break;
+        case RESULT_FILA:
+            fila_enfileirar((FILA*)c->resultado, item);
+            break;
+        case RESULT_LISTA_SEQ:
+            lista_seq_inserir((LISTA_SEQ*)c->resultado, item);
+            break;
+        case RESULT_LISTA_CABECA:
+            lista_cabeca_inserir_fim((LISTA_CABECA*)c->resultado, item);
+            break;
+
+        case RESULT_LISTA_CRUZ: {
+                char val_dim1[64] = {0};
+                char val_dim2[64] = {0};
+
+                const char *campo1 = query_get_cross_campo1(c->query);
+                const char *campo2 = query_get_cross_campo2(c->query);
+
+                // Extrai os valores formatados como string diretamente do ITEM
+                item_get_campo_str(item, campo1, val_dim1, sizeof(val_dim1));
+                item_get_campo_str(item, campo2, val_dim2, sizeof(val_dim2));
+
+                // Insere no TAD Lista Cruzada
+                lista_cruz_inserir((LISTA_CRUZ *) c->resultado, item, val_dim1, val_dim2);
+                break;
+            }
+        
+        default: break;
+
+    }
+    
+
+}
 
 static void processa_item(ITEM *item, void *ctx){
     ContextoBusca *c = (ContextoBusca*) ctx;
-    double sim = 0.0;
+    float sim = 0.0;
+
+    if(item == NULL || c == NULL) return;
+
+    if(query_avaliar(item, c->query, &sim)){
+        inserir_resultado(item, c, sim);
+    }
+    return;
 }
 
 static void destruir_item_cb(ITEM *item, void *ctx) {
