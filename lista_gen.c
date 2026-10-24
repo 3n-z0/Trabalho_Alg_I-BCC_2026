@@ -1,158 +1,236 @@
 #include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include "item.h"
+#include <string.h>
 #include "lista_gen.h"
 
 typedef struct no_ NO;
-typedef enum{
+
+typedef enum {
     TIPO_ATOMO,
     TIPO_SUBLISTA
-}TIPO_NO;
+} TIPO_NO;
 
-struct lista_gen_{
+struct lista_gen_ {
     NO *inicio;
-    int profundidade;
+    NO *fim;
 };
 
-struct no_{
+struct no_ {
     TIPO_NO tipo;
-
-    union 
-    {
+    union {
         ITEM *atomo;
-        LISTA_G *sublista;
-    }info;
-
+        LISTA_GEN *sublista;
+    } info;
+    char *chave;
     NO *prox;
 };
 
-LISTA_G *lista_gen_criar(void){
-    LISTA_G *lista = (LISTA_G*)malloc(sizeof(LISTA_G));
-    if(lista != NULL){
+LISTA_GEN *lista_gen_criar(void) {
+    LISTA_GEN *lista = malloc(sizeof(*lista));
+    if (lista != NULL) {
         lista->inicio = NULL;
-        lista->profundidade = 0;
+        lista->fim = NULL;
     }
     return lista;
 }
 
-static NO *lista_gen_fim(LISTA_G *lista){
-    if(lista != NULL){
-        NO *fim = lista->inicio;
-        if(fim == NULL){
+static void anexar_no(LISTA_GEN *lista, NO *no) {
+    no->prox = NULL;
+    if (lista->fim == NULL) {
+        lista->inicio = no;
+    } else {
+        lista->fim->prox = no;
+    }
+    lista->fim = no;
+}
+
+bool lista_gen_inserir_atomo(LISTA_GEN *lista, ITEM *item) {
+    if (lista == NULL || item == NULL) return false;
+
+    NO *no = malloc(sizeof(*no));
+    if (no == NULL) return false;
+
+    no->tipo = TIPO_ATOMO;
+    no->info.atomo = item;
+    no->chave = NULL;
+    anexar_no(lista, no);
+    return true;
+}
+
+static NO *criar_no_sublista(const char *chave) {
+    NO *no = malloc(sizeof(*no));
+    if (no == NULL) return NULL;
+
+    no->tipo = TIPO_SUBLISTA;
+    no->chave = NULL;
+    no->prox = NULL;
+    no->info.sublista = lista_gen_criar();
+    if (no->info.sublista == NULL) {
+        free(no);
+        return NULL;
+    }
+
+    if (chave != NULL) {
+        size_t tamanho = strlen(chave) + 1;
+        no->chave = malloc(tamanho);
+        if (no->chave == NULL) {
+            lista_gen_apagar(&no->info.sublista);
+            free(no);
             return NULL;
         }
-        while(fim->prox != NULL){
-            fim = fim->prox;
+        memcpy(no->chave, chave, tamanho);
+    }
+    return no;
+}
+
+LISTA_GEN *lista_gen_inserir_sublista(LISTA_GEN *lista) {
+    if (lista == NULL) return NULL;
+
+    NO *no = criar_no_sublista(NULL);
+    if (no == NULL) return NULL;
+
+    anexar_no(lista, no);
+    return no->info.sublista;
+}
+
+static NO *encontrar_grupo(const LISTA_GEN *lista, const char *chave) {
+    for (NO *atual = lista->inicio; atual != NULL; atual = atual->prox) {
+        if (atual->tipo == TIPO_SUBLISTA && atual->chave != NULL &&
+            strcmp(atual->chave, chave) == 0) {
+            return atual;
         }
-        return fim;
     }
     return NULL;
 }
 
-bool lista_gen_inserir_atomo(LISTA_G *lista, ITEM *item){
-    if(lista != NULL && item != NULL){
-        NO *no = (NO*)malloc(sizeof(NO)), *fim;
-        
-        if(no == NULL){
+static void apagar_no(NO *no) {
+    if (no == NULL) return;
+
+    if (no->tipo == TIPO_SUBLISTA) {
+        lista_gen_apagar(&no->info.sublista);
+    }
+    free(no->chave);
+    free(no);
+}
+
+bool lista_gen_inserir_agrupado(LISTA_GEN *lista, ITEM *item,
+                              const char *grupo, const char *subgrupo) {
+    if (lista == NULL || item == NULL || grupo == NULL || subgrupo == NULL) {
+        return false;
+    }
+
+    NO *no_grupo = encontrar_grupo(lista, grupo);
+    NO *novo_grupo = NULL;
+    if (no_grupo == NULL) {
+        novo_grupo = criar_no_sublista(grupo);
+        if (novo_grupo == NULL) return false;
+        no_grupo = novo_grupo;
+    }
+
+    NO *no_subgrupo = encontrar_grupo(no_grupo->info.sublista, subgrupo);
+    NO *novo_subgrupo = NULL;
+    if (no_subgrupo == NULL) {
+        novo_subgrupo = criar_no_sublista(subgrupo);
+        if (novo_subgrupo == NULL) {
+            apagar_no(novo_grupo);
             return false;
         }
+        no_subgrupo = novo_subgrupo;
+    }
 
-        no->info.atomo = item;
-        no->prox = NULL;
-        no->tipo = TIPO_ATOMO;
+    if (!lista_gen_inserir_atomo(no_subgrupo->info.sublista, item)) {
+        apagar_no(novo_subgrupo);
+        apagar_no(novo_grupo);
+        return false;
+    }
 
-        fim = lista_gen_fim(lista);
+    if (novo_subgrupo != NULL) {
+        anexar_no(no_grupo->info.sublista, novo_subgrupo);
+    }
+    if (novo_grupo != NULL) {
+        anexar_no(lista, novo_grupo);
+    }
+    return true;
+}
 
-        if(fim == NULL){
-            lista->inicio = no;
+static void percorrer_recursivo(const LISTA_GEN *lista, size_t limite,
+                               void (*visita)(ITEM *item, void *ctx),
+                               void *ctx, size_t *visitados) {
+    for (NO *atual = lista->inicio; atual != NULL; atual = atual->prox) {
+        if (limite != 0 && *visitados >= limite) return;
+
+        if (atual->tipo == TIPO_ATOMO) {
+            visita(atual->info.atomo, ctx);
+            (*visitados)++;
+        } else {
+            percorrer_recursivo(atual->info.sublista, limite,
+                               visita, ctx, visitados);
         }
-        else{
-            fim->prox = no;
-        }
+    }
+}
 
-        return true;
+size_t lista_gen_percorrer_limite(const LISTA_GEN *lista, size_t limite,
+                                void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    if (lista == NULL || visita == NULL) return 0;
+
+    size_t visitados = 0;
+    percorrer_recursivo(lista, limite, visita, ctx, &visitados);
+    return visitados;
+}
+
+void lista_gen_percorrer(const LISTA_GEN *lista,
+                        void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    (void) lista_gen_percorrer_limite(lista, 0, visita, ctx);
+}
+
+bool lista_gen_remover(LISTA_GEN *lista, const ITEM *item) {
+    if (lista == NULL || item == NULL) return false;
+
+    NO *anterior = NULL;
+    NO *atual = lista->inicio;
+    while (atual != NULL) {
+        if (atual->tipo == TIPO_ATOMO && atual->info.atomo == item) {
+            if (anterior == NULL) {
+                lista->inicio = atual->prox;
+            } else {
+                anterior->prox = atual->prox;
+            }
+            if (lista->fim == atual) lista->fim = anterior;
+            apagar_no(atual);
+            return true;
+        }
+        if (atual->tipo == TIPO_SUBLISTA &&
+            lista_gen_remover(atual->info.sublista, item)) {
+            return true;
+        }
+        anterior = atual;
+        atual = atual->prox;
     }
     return false;
 }
 
-LISTA_G *lista_gen_inserir_sublista(LISTA_G *lista){
-    if(lista != NULL){
-        NO *no = (NO*)malloc(sizeof(NO)), *fim;
-        
-        if(no == NULL){
-            return NULL;
-        }
+void lista_gen_apagar(LISTA_GEN **lista) {
+    if (lista == NULL || *lista == NULL) return;
 
-        no->info.sublista = lista_gen_criar();
-        if(no->info.sublista == NULL){
-            free(no);
-            return NULL;
-        }
-        no->prox = NULL;
-        no->tipo = TIPO_SUBLISTA;
-        no->info.sublista->profundidade = lista->profundidade + 1;
-
-        fim = lista_gen_fim(lista);
-
-        if(fim == NULL){
-            lista->inicio = no;
-        }
-        else{
-            fim->prox = no;
-        }
-        
-        return no->info.sublista;
+    NO *atual = (*lista)->inicio;
+    while (atual != NULL) {
+        NO *prox = atual->prox;
+        apagar_no(atual);
+        atual = prox;
     }
-    return NULL;
+    free(*lista);
+    *lista = NULL;
 }
 
-static void atomo_apagar(NO **atomo){
-    if(atomo != NULL && (*atomo) != NULL){
-        item_apagar(&(*atomo)->info.atomo);
-        free(*atomo);
-        *atomo = NULL;
-    }
-}
+int lista_gen_get_profundidade(LISTA_GEN *lista) {
+    if (lista == NULL) return -1;
+    if (lista->inicio == NULL) return 0;
 
-void lista_gen_apagar(LISTA_G **lista){
-    if(lista != NULL && (*lista) != NULL){
-        NO *atual = (*lista)->inicio;
-        NO *prox = NULL;
-        while(atual != NULL){
-            prox = atual->prox;
-            if(atual->tipo == TIPO_ATOMO){
-                atomo_apagar(&atual);
-            }
-            else{
-                lista_gen_apagar(&atual->info.sublista);
-                free(atual);
-                atual = NULL;
-            }
-            atual = prox;
+    int maior = 0;
+    for (NO *atual = lista->inicio; atual != NULL; atual = atual->prox) {
+        if (atual->tipo == TIPO_SUBLISTA) {
+            int profundidade = lista_gen_get_profundidade(atual->info.sublista);
+            if (profundidade > maior) maior = profundidade;
         }
-        free(*lista);
-        *lista = NULL;
     }
-}
-
-int lista_gen_get_profundidade(LISTA_G *lista){
-    if(lista != NULL){
-        int prof = 0, t;
-        NO *atual = lista->inicio;
-        if(atual == NULL){
-            return 0;
-        }
-        while(atual != NULL){
-            if(atual->tipo == TIPO_SUBLISTA){
-                t = lista_gen_get_profundidade(atual->info.sublista);
-                if(t > prof){
-                    prof = t;
-                }
-            }
-            atual = atual->prox;
-        }
-        return prof + 1;
-    }
-    return -1;
+    return maior + 1;
 }

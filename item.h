@@ -52,4 +52,6 @@
     float item_get_sentry_torino_scale(const ITEM *item);
     float item_get_sentry_palermo_scale(const ITEM *item);
     float item_get_sentry_diameter_km(const ITEM *item);
+
+    void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t tam_dest);
 #endif

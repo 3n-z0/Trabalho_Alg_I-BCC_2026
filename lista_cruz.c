@@ -136,7 +136,7 @@ void lista_cruz_apagar(LISTA_CRUZ **lc){
 }
 
 void lista_cruz_percorrer(const LISTA_CRUZ *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
-    if(lc == NULL || visita == NULL) return NULL;
+    if(lc == NULL || visita == NULL) return;
 
     CABECALHO *lin = lc->linhas;
 

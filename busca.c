@@ -8,17 +8,7 @@
 #include "lista_seq.h"
 #include "lista_cabeca.h"
 #include "lista_cruz.h"
-
-typedef enum {
-    RESULT_PILHA,
-    RESULT_FILA,
-    RESULT_LISTA_SEQ,
-    RESULT_LISTA_ENC,
-    RESULT_LISTA_CABECA,
-    RESULT_LISTA_ORD,
-    RESULT_LISTA_GEN,
-    RESULT_LISTA_CRUZ
-} TipoResultado;
+#include "busca.h"
 
 typedef struct {
     QUERY *query;
@@ -80,7 +70,32 @@ static void processa_item(ITEM *item, void *ctx){
     return;
 }
 
-static void destruir_item_cb(ITEM *item, void *ctx) {
+static void destruir_item(ITEM *item, void *ctx) {
     (void) ctx; //ignora o contexto não utilizado
     item_apagar(&item); //destrói o ITEM
+}
+
+void buscar(void *base, TipoResultado tipo_base, QUERY *query, void *resultado, TipoResultado tipo_res){
+    ContextoBusca *c = (ContextoBusca*)malloc(sizeof(ContextoBusca));
+
+    if(c == NULL) return;
+
+    c->query = query;
+    c->resultado = resultado;
+    c->tipo_res = tipo_res;
+
+    switch(tipo_base){
+        case RESULT_PILHA: break;
+        case RESULT_FILA: break;
+        case RESULT_LISTA_SEQ: break;
+        case RESULT_LISTA_ENC: break;
+        case RESULT_LISTA_CABECA: break;
+        case RESULT_LISTA_ORD: break;
+        case RESULT_LISTA_GEN: break;
+        case RESULT_LISTA_CRUZ: break;
+        default: break;
+    }
+
+    free(c);
+    c = NULL;
 }

@@ -106,4 +106,8 @@ void lista_cabeca_percorrer(LISTA_CABECA *lc, void (*visita)(ITEM *item, void *c
     return;
 }
 
+ITEM *lista_cabeca_buscar(LISTA_CABECA *lc, ITEM *item, const char *campo, const char * valor){
+    
+}
+
 

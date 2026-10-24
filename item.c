@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stddef.h>
 #include "item.h"
 
 typedef struct //struct será alocada exclusivamente se on_sentry_info == true;
@@ -232,7 +233,7 @@ float item_get_sentry_diameter_km(const ITEM *item) {
     return item->sentry_info->sentry_diameter_km;
 }
 
-void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t tam_dest) {
+void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t tam_dest){
     if (item == NULL || campo == NULL || dest == NULL || tam_dest == 0) return;
 
     // --- CAMPOS DE TEXTO ---

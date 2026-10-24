@@ -21,9 +21,9 @@ typedef struct filtro_
 typedef struct sim_
 {
     char campo[32];
-    float alvo;
-    float tolerancia;
-    float peso;
+    double alvo;
+    double tolerancia;
+    double peso;
     struct sim_ *prox;
 }RegraSim;
 
@@ -33,7 +33,7 @@ struct query_
 
     RegraSim *regra_sim;
 
-    float sim_aceita;
+    double sim_aceita;
 
     char order_campo[32];
     char order_direcao[5];
@@ -55,6 +55,8 @@ static double extrair_valor_numerico(ITEM *item, const char *campo){
     if (strcmp(campo, "month") == 0) return (double) item_get_month(item);
     if (strcmp(campo, "absolute_magnitude") == 0) return (double) item_get_absolute_magnitude(item);
     if (strcmp(campo, "panic_level") == 0) return (double) item_get_panic_level(item);
+    if (strcmp(campo, "days_until_approach") == 0) return (double) item_get_days_until_approach(item);
+
 
     if (strcmp(campo, "sentry_torino_scale") == 0) return (double) item_get_sentry_torino_scale(item);
     if (strcmp(campo, "sentry_palermo_scale") == 0) return (double) item_get_sentry_palermo_scale(item);
@@ -109,11 +111,11 @@ QUERY *query_criar(const char *dados_query){
             if(filtro == NULL) {query_apagar(&query); fclose(texto_query); return NULL;}
             filtro->prox = NULL;
 
-            fscanf(texto_query, " %[^|]|", filtro->campo);
-            fscanf(texto_query, " %[^|]|", filtro->operador);
-            fscanf(texto_query, " %[^\r\n]\n", filtro->valor_str);
+            fscanf(texto_query, " %63[^|]|", filtro->campo);
+            fscanf(texto_query, " %3[^|]|", filtro->operador);
+            fscanf(texto_query, " %63[^\r\n]\n", filtro->valor_str);
 
-            if(strcmp(filtro->campo, "distance_au") == 0 || strcmp(filtro->campo, "velocity_km_s") == 0 || strcmp(filtro->campo, "risk_score") == 0 || strcmp(filtro->campo, "year") == 0|| strcmp(filtro->campo, "month") == 0 || strcmp(filtro->campo, "absolute_magnitude") == 0 || strcmp(filtro->campo, "panic_level") == 0){
+            if(strcmp(filtro->campo, "distance_au") == 0 || strcmp(filtro->campo, "velocity_km_s") == 0 || strcmp(filtro->campo, "risk_score") == 0 || strcmp(filtro->campo, "year") == 0|| strcmp(filtro->campo, "month") == 0 || strcmp(filtro->campo, "absolute_magnitude") == 0 || strcmp(filtro->campo, "panic_level") == 0 || strcmp(filtro->campo, "days_until_approach") == 0 || strcmp(filtro->campo, "sentry_torino_scale") == 0 || strcmp(filtro->campo, "sentry_palermo_scale") == 0 || strcmp(filtro->campo, "sentry_diameter_km") == 0){
                 filtro->eh_numerico = true;
                 filtro->valor_num = atof(filtro->valor_str);
             }
@@ -143,7 +145,7 @@ QUERY *query_criar(const char *dados_query){
             if(sim == NULL) {query_apagar(&query); fclose(texto_query); return NULL;}
             sim->prox = NULL;
 
-            fscanf(texto_query, " %[^|]|", sim->campo);
+            fscanf(texto_query, " %31[^|]|", sim->campo);
             fscanf(texto_query, " %f|", &sim->alvo);
             fscanf(texto_query, " %f|", &sim->tolerancia);
             fscanf(texto_query, " %f\n", &sim->peso);
@@ -180,7 +182,7 @@ QUERY *query_criar(const char *dados_query){
     return query;
 }
 
-bool query_avaliar(ITEM *item, QUERY *query, float *sim){
+bool query_avaliar(ITEM *item, QUERY *query, double *sim){
     if(query == NULL || item == NULL) return false;
 
     RegraFiltro *regra_atual = query->regra_filtro;
