@@ -20,4 +20,6 @@
 
     const char *query_get_group_campo2(QUERY *query);
 
+    const char *query_get_order_campo(QUERY *query);
+
 #endif

@@ -323,3 +323,21 @@ void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t 
         snprintf(dest, tam_dest, "DESCONHECIDO");
     }
 }
+
+double item_get_campo_num(const ITEM *item, const char *campo){
+    if (strcmp(campo, "distance_au") == 0) return item_get_distance_au(item);
+    if (strcmp(campo, "velocity_km_s") == 0) return item_get_velocity_km_s(item);
+    if (strcmp(campo, "risk_score") == 0) return item_get_risk_score(item);
+    if (strcmp(campo, "year") == 0) return (double) item_get_year(item);
+    if (strcmp(campo, "month") == 0) return (double) item_get_month(item);
+    if (strcmp(campo, "absolute_magnitude") == 0) return (double) item_get_absolute_magnitude(item);
+    if (strcmp(campo, "panic_level") == 0) return (double) item_get_panic_level(item);
+    if (strcmp(campo, "days_until_approach") == 0) return (double) item_get_days_until_approach(item);
+
+
+    if (strcmp(campo, "sentry_torino_scale") == 0) return (double) item_get_sentry_torino_scale(item);
+    if (strcmp(campo, "sentry_palermo_scale") == 0) return (double) item_get_sentry_palermo_scale(item);
+    if (strcmp(campo, "sentry_diameter_km") == 0) return (double) item_get_sentry_diameter_km(item);
+
+    return 0.0;
+}

@@ -1,13 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "item.h"
 #include "query.h"
 #include "fila.h"
 #include "pilha.h"
 #include "lista_seq.h"
 #include "lista_cabeca.h"
+#include "lista_enc.h"
 #include "lista_cruz.h"
+#include "lista_gen.h"
+#include "lista_ord.h"
 #include "busca.h"
 
 typedef struct {
@@ -46,8 +50,44 @@ static void inserir_resultado(ITEM *item, void *ctx, float sim){
                 item_get_campo_str(item, campo1, val_dim1, sizeof(val_dim1));
                 item_get_campo_str(item, campo2, val_dim2, sizeof(val_dim2));
 
-                // Insere no TAD Lista Cruzada
-                lista_cruz_inserir((LISTA_CRUZ *) c->resultado, item, val_dim1, val_dim2);
+                lista_cruz_inserir((LISTA_CRUZ*) c->resultado, item, val_dim1, val_dim2);
+                break;
+            }
+        case RESULT_LISTA_ENC:
+            lista_cabeca_inserir_fim((LISTA_ENC*)c->resultado, item);
+            break;
+
+        case RESULT_LISTA_GEN: {
+                char val_dim1[64] = {0};
+                char val_dim2[64] = {0};
+
+                const char *campo1 = query_get_group_campo1(c->query);
+                const char *campo2 = query_get_group_campo2(c->query);
+
+                // Extrai os valores formatados como string diretamente do ITEM
+                item_get_campo_str(item, campo1, val_dim1, sizeof(val_dim1));
+                item_get_campo_str(item, campo2, val_dim2, sizeof(val_dim2));
+
+                lista_gen_inserir_agrupado((LISTA_GEN*) c->resultado, item, val_dim1, val_dim2);
+                break;
+            }
+        case RESULT_LISTA_ORD: {
+                char val_dim[64] = {0};
+
+                const char *campo = query_get_order_campo(c->query);
+
+                if(strcmp(campo, "distance_au") == 0 || strcmp(campo, "velocity_km_s") == 0 || strcmp(campo, "risk_score") == 0 || strcmp(campo, "year") == 0|| strcmp(campo, "month") == 0 || strcmp(campo, "absolute_magnitude") == 0 || strcmp(campo, "panic_level") == 0 || strcmp(campo, "days_until_approach") == 0 || strcmp(campo, "sentry_torino_scale") == 0 || strcmp(campo, "sentry_palermo_scale") == 0 || strcmp(campo, "sentry_diameter_km") == 0){
+                    lista_ord_inserir_numero((LISTA_ORD*)c->resultado, item, item_get_campo_num(item, campo));
+                }
+                else if(strcmp(campo, "similarity") == 0){
+                    lista_ord_inserir_numero((LISTA_ORD*)c->resultado, item, sim);
+                }
+                else{
+                    item_get_campo_str(item, campo, val_dim, sizeof(val_dim));
+
+                    lista_ord_inserir_texto((LISTA_ORD*)c->resultado, item, val_dim);
+                }
+                
                 break;
             }
         

@@ -298,3 +298,9 @@ const char *query_get_group_campo2(QUERY *query){
 
     return query->group_campo2;
 }
+
+const char *query_get_order_campo(QUERY *query){
+    if(query == NULL) return NULL;
+
+    return query->order_campo;
+}

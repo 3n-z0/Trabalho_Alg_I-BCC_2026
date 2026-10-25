@@ -9,5 +9,6 @@
     void lista_cabeca_apagar(LISTA_CABECA **lista_cabeca);
     bool lista_cabeca_inserir_fim(LISTA_CABECA *lista_cabeca, ITEM *item);
     bool lista_cabeca_inserir_inicio(LISTA_CABECA *lista_cabeca, ITEM *item);
+    ITEM *lista_cabeca_buscar(const LISTA_CABECA *l, int pos);
     void lista_cabeca_percorrer(LISTA_CABECA *lc, void (*visita)(ITEM *item, void *ctx), void *ctx);
 #endif

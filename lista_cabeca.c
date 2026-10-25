@@ -106,8 +106,14 @@ void lista_cabeca_percorrer(LISTA_CABECA *lc, void (*visita)(ITEM *item, void *c
     return;
 }
 
-ITEM *lista_cabeca_buscar(LISTA_CABECA *lc, ITEM *item, const char *campo, const char * valor){
-    
+ITEM *lista_cabeca_buscar(const LISTA_CABECA *l, int pos){
+    if (l == NULL || pos < 0 || pos >= l->tam) return NULL;
+
+    NO *atual = l->cabeca->prox;
+    for (int i = 0; i < pos; i++) {
+        atual = atual->prox;
+    }
+    return atual->item;
 }
 
 
