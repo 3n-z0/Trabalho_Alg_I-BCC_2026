@@ -85,3 +85,21 @@ int fila_tamanho(const FILA *f) {
     if (f == NULL) return 0;
     return f->tamanho;
 }
+
+size_t fila_percorrer_limite(const FILA *f, size_t limite,
+                           void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    if (f == NULL || visita == NULL) return 0;
+
+    size_t visitados = 0;
+    for (NO *atual = f->inicio; atual != NULL; atual = atual->proximo) {
+        if (limite != 0 && visitados >= limite) break;
+        visita(atual->item, ctx);
+        visitados++;
+    }
+    return visitados;
+}
+
+void fila_percorrer(const FILA *f,
+                   void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    (void) fila_percorrer_limite(f, 0, visita, ctx);
+}

@@ -75,3 +75,21 @@ int lista_seq_tamanho(const LISTA_SEQ *l) {
     if (l == NULL) return 0;
     return l->tamanho;
 }
+
+size_t lista_seq_percorrer_limite(const LISTA_SEQ *l, size_t limite,
+                                void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    if (l == NULL || visita == NULL) return 0;
+
+    size_t visitados = 0;
+    for (int i = 0; i < l->tamanho; i++) {
+        if (limite != 0 && visitados >= limite) break;
+        visita(l->itens[i], ctx);
+        visitados++;
+    }
+    return visitados;
+}
+
+void lista_seq_percorrer(const LISTA_SEQ *l,
+                        void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    (void) lista_seq_percorrer_limite(l, 0, visita, ctx);
+}

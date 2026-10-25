@@ -95,15 +95,23 @@ bool lista_cabeca_inserir_inicio(LISTA_CABECA *lista_cabeca, ITEM *item){
     return true;
 }
 
-void lista_cabeca_percorrer(LISTA_CABECA *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
-    if(lc == NULL || lc->cabeca == NULL || visita == NULL) return;
+size_t lista_cabeca_percorrer_limite(const LISTA_CABECA *lc, size_t limite,
+                                     void (*visita)(ITEM *item, void *ctx), void *ctx){
+    if(lc == NULL || lc->cabeca == NULL || visita == NULL) return 0;
 
-    NO *atual = lc->cabeca->prox;
+    size_t visitados = 0;
+    NO *atual = lc->cabeca->prox; //pula o no cabeca, que nao guarda registro;
     while(atual != NULL){
+        if(limite != 0 && visitados >= limite) break;
         visita(atual->item, ctx);
+        visitados++;
         atual = atual->prox;
-    } 
-    return;
+    }
+    return visitados;
+}
+
+void lista_cabeca_percorrer(const LISTA_CABECA *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
+    (void) lista_cabeca_percorrer_limite(lc, 0, visita, ctx);
 }
 
 ITEM *lista_cabeca_buscar(const LISTA_CABECA *l, int pos){

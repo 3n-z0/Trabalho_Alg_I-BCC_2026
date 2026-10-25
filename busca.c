@@ -14,30 +14,37 @@
 #include "lista_ord.h"
 #include "busca.h"
 
+//Como a chave do ORDER e obtida; decidido uma unica vez em buscar();
+typedef enum {
+    ORD_SIMILARIDADE,
+    ORD_NUMERICO,
+    ORD_TEXTO
+} ModoOrd;
+
 typedef struct {
     QUERY *query;
     void *resultado;
     TipoResultado tipo_res;
+    ModoOrd modo_ord;
+    const char *campo_ord;
+    size_t aceitos; //insercoes bem-sucedidas no resultado;
+    bool erro;      //alguma insercao falhou;
 } ContextoBusca;
 
-static void inserir_resultado(ITEM *item, void *ctx, float sim){
+static bool inserir_resultado(ITEM *item, void *ctx, double sim){
     ContextoBusca *c = (ContextoBusca*) ctx;
 
-    if(item == NULL || c == NULL) return;
+    if(item == NULL || c == NULL) return false;
 
     switch(c->tipo_res){
         case RESULT_PILHA:
-            pilha_empilhar((PILHA*)c->resultado, item);
-            break;
+            return pilha_empilhar((PILHA*)c->resultado, item);
         case RESULT_FILA:
-            fila_enfileirar((FILA*)c->resultado, item);
-            break;
+            return fila_enfileirar((FILA*)c->resultado, item);
         case RESULT_LISTA_SEQ:
-            lista_seq_inserir((LISTA_SEQ*)c->resultado, item);
-            break;
+            return lista_seq_inserir((LISTA_SEQ*)c->resultado, item);
         case RESULT_LISTA_CABECA:
-            lista_cabeca_inserir_fim((LISTA_CABECA*)c->resultado, item);
-            break;
+            return lista_cabeca_inserir_fim((LISTA_CABECA*)c->resultado, item);
 
         case RESULT_LISTA_CRUZ: {
                 char val_dim1[64] = {0};
@@ -50,12 +57,10 @@ static void inserir_resultado(ITEM *item, void *ctx, float sim){
                 item_get_campo_str(item, campo1, val_dim1, sizeof(val_dim1));
                 item_get_campo_str(item, campo2, val_dim2, sizeof(val_dim2));
 
-                lista_cruz_inserir((LISTA_CRUZ*) c->resultado, item, val_dim1, val_dim2);
-                break;
+                return lista_cruz_inserir((LISTA_CRUZ*) c->resultado, item, val_dim1, val_dim2);
             }
         case RESULT_LISTA_ENC:
-            lista_cabeca_inserir_fim((LISTA_ENC*)c->resultado, item);
-            break;
+            return lista_enc_inserir((LISTA_ENC*)c->resultado, item);
 
         case RESULT_LISTA_GEN: {
                 char val_dim1[64] = {0};
@@ -68,44 +73,43 @@ static void inserir_resultado(ITEM *item, void *ctx, float sim){
                 item_get_campo_str(item, campo1, val_dim1, sizeof(val_dim1));
                 item_get_campo_str(item, campo2, val_dim2, sizeof(val_dim2));
 
-                lista_gen_inserir_agrupado((LISTA_GEN*) c->resultado, item, val_dim1, val_dim2);
-                break;
+                return lista_gen_inserir_agrupado((LISTA_GEN*) c->resultado, item, val_dim1, val_dim2);
             }
         case RESULT_LISTA_ORD: {
-                char val_dim[64] = {0};
+                LISTA_ORD *ord = (LISTA_ORD*)c->resultado;
 
-                const char *campo = query_get_order_campo(c->query);
-
-                if(strcmp(campo, "distance_au") == 0 || strcmp(campo, "velocity_km_s") == 0 || strcmp(campo, "risk_score") == 0 || strcmp(campo, "year") == 0|| strcmp(campo, "month") == 0 || strcmp(campo, "absolute_magnitude") == 0 || strcmp(campo, "panic_level") == 0 || strcmp(campo, "days_until_approach") == 0 || strcmp(campo, "sentry_torino_scale") == 0 || strcmp(campo, "sentry_palermo_scale") == 0 || strcmp(campo, "sentry_diameter_km") == 0){
-                    lista_ord_inserir_numero((LISTA_ORD*)c->resultado, item, item_get_campo_num(item, campo));
+                switch(c->modo_ord){
+                    case ORD_SIMILARIDADE:
+                        return lista_ord_inserir_numero(ord, item, sim);
+                    case ORD_NUMERICO:
+                        return lista_ord_inserir_numero(ord, item, item_get_campo_num(item, c->campo_ord));
+                    case ORD_TEXTO: {
+                            char val_dim[64] = {0};
+                            item_get_campo_str(item, c->campo_ord, val_dim, sizeof(val_dim));
+                            return lista_ord_inserir_texto(ord, item, val_dim);
+                        }
                 }
-                else if(strcmp(campo, "similarity") == 0){
-                    lista_ord_inserir_numero((LISTA_ORD*)c->resultado, item, sim);
-                }
-                else{
-                    item_get_campo_str(item, campo, val_dim, sizeof(val_dim));
-
-                    lista_ord_inserir_texto((LISTA_ORD*)c->resultado, item, val_dim);
-                }
-                
-                break;
+                return false;
             }
-        
-        default: break;
+
+        default: return false;
 
     }
-    
-
 }
 
 static void processa_item(ITEM *item, void *ctx){
     ContextoBusca *c = (ContextoBusca*) ctx;
-    float sim = 0.0;
+    double sim = 0.0;
 
     if(item == NULL || c == NULL) return;
 
     if(query_avaliar(item, c->query, &sim)){
-        inserir_resultado(item, c, sim);
+        if(inserir_resultado(item, c, sim)){
+            c->aceitos++;
+        }
+        else{
+            c->erro = true;
+        }
     }
     return;
 }
@@ -115,27 +119,57 @@ static void destruir_item(ITEM *item, void *ctx) {
     item_apagar(&item); //destrói o ITEM
 }
 
-void buscar(void *base, TipoResultado tipo_base, QUERY *query, void *resultado, TipoResultado tipo_res){
-    ContextoBusca *c = (ContextoBusca*)malloc(sizeof(ContextoBusca));
+bool buscar(void *base, TipoResultado tipo_base, QUERY *query,
+            void *resultado, TipoResultado tipo_res, size_t *aceitos){
+    if(aceitos != NULL) *aceitos = 0;
+    if(base == NULL || query == NULL || resultado == NULL) return false;
 
-    if(c == NULL) return;
+    ContextoBusca contexto = {0};
+    ContextoBusca *c = &contexto;
 
     c->query = query;
     c->resultado = resultado;
     c->tipo_res = tipo_res;
 
-    switch(tipo_base){
-        case RESULT_PILHA: break;
-        case RESULT_FILA: break;
-        case RESULT_LISTA_SEQ: break;
-        case RESULT_LISTA_ENC: break;
-        case RESULT_LISTA_CABECA: break;
-        case RESULT_LISTA_ORD: break;
-        case RESULT_LISTA_GEN: break;
-        case RESULT_LISTA_CRUZ: break;
-        default: break;
+    //decide uma unica vez como obter a chave do ORDER, em vez de a cada item;
+    if(tipo_res == RESULT_LISTA_ORD){
+        const char *campo = query_get_order_campo(query);
+        if(campo == NULL || campo[0] == '\0') return false;
+
+        c->campo_ord = campo;
+        if(strcmp(campo, "similarity") == 0) c->modo_ord = ORD_SIMILARIDADE;
+        else if(item_campo_eh_numerico(campo)) c->modo_ord = ORD_NUMERICO;
+        else c->modo_ord = ORD_TEXTO;
     }
 
-    free(c);
-    c = NULL;
+    switch(tipo_base){
+        case RESULT_PILHA:
+            pilha_percorrer((PILHA*)base, processa_item, c);
+            break;
+        case RESULT_FILA:
+            fila_percorrer((FILA*)base, processa_item, c);
+            break;
+        case RESULT_LISTA_SEQ:
+            lista_seq_percorrer((LISTA_SEQ*)base, processa_item, c);
+            break;
+        case RESULT_LISTA_ENC:
+            lista_enc_percorrer((LISTA_ENC*)base, processa_item, c);
+            break;
+        case RESULT_LISTA_CABECA:
+            lista_cabeca_percorrer((LISTA_CABECA*)base, processa_item, c);
+            break;
+        case RESULT_LISTA_ORD:
+            lista_ord_percorrer((LISTA_ORD*)base, processa_item, c);
+            break;
+        case RESULT_LISTA_GEN:
+            lista_gen_percorrer((LISTA_GEN*)base, processa_item, c);
+            break;
+        case RESULT_LISTA_CRUZ:
+            lista_cruz_percorrer((LISTA_CRUZ*)base, processa_item, c);
+            break;
+        default: return false;
+    }
+
+    if(aceitos != NULL) *aceitos = c->aceitos;
+    return !c->erro;
 }

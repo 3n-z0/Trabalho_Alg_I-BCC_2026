@@ -8,7 +8,7 @@
 
     QUERY *query_criar(const char *dados_query);
 
-    bool query_avaliar(ITEM *item, QUERY *query, float *sim);
+    bool query_avaliar(ITEM *item, QUERY *query, double *sim);
 
     void query_apagar(QUERY **query);
 

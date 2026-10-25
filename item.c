@@ -325,6 +325,8 @@ void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t 
 }
 
 double item_get_campo_num(const ITEM *item, const char *campo){
+    if(campo == NULL) return 0.0;
+
     if (strcmp(campo, "distance_au") == 0) return item_get_distance_au(item);
     if (strcmp(campo, "velocity_km_s") == 0) return item_get_velocity_km_s(item);
     if (strcmp(campo, "risk_score") == 0) return item_get_risk_score(item);
@@ -340,4 +342,18 @@ double item_get_campo_num(const ITEM *item, const char *campo){
     if (strcmp(campo, "sentry_diameter_km") == 0) return (double) item_get_sentry_diameter_km(item);
 
     return 0.0;
+}
+
+bool item_campo_eh_numerico(const char *campo){
+    static const char *const numericos[] = {
+        "distance_au", "velocity_km_s", "risk_score", "year", "month",
+        "absolute_magnitude", "panic_level", "days_until_approach",
+        "sentry_torino_scale", "sentry_palermo_scale", "sentry_diameter_km"
+    };
+    if (campo == NULL) return false;
+
+    for (size_t i = 0; i < sizeof(numericos) / sizeof(numericos[0]); i++) {
+        if (strcmp(campo, numericos[i]) == 0) return true;
+    }
+    return false;
 }

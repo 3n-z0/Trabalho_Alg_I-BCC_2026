@@ -146,9 +146,9 @@ QUERY *query_criar(const char *dados_query){
             sim->prox = NULL;
 
             fscanf(texto_query, " %31[^|]|", sim->campo);
-            fscanf(texto_query, " %f|", &sim->alvo);
-            fscanf(texto_query, " %f|", &sim->tolerancia);
-            fscanf(texto_query, " %f\n", &sim->peso);
+            fscanf(texto_query, " %lf|", &sim->alvo);
+            fscanf(texto_query, " %lf|", &sim->tolerancia);
+            fscanf(texto_query, " %lf\n", &sim->peso);
 
             if(query->regra_sim == NULL){
                 query->regra_sim = sim;
@@ -163,7 +163,7 @@ QUERY *query_criar(const char *dados_query){
             }
         }
         else if(strcmp(campo_query, "ACCEPT") == 0){
-            fscanf(texto_query, " %f\n", &query->sim_aceita);
+            fscanf(texto_query, " %lf\n", &query->sim_aceita);
         }
         else if(strcmp(campo_query, "ORDER") == 0){
             fscanf(texto_query, " %[^|]|", query->order_campo);

@@ -135,17 +135,26 @@ void lista_cruz_apagar(LISTA_CRUZ **lc){
     *lc = NULL;
 }
 
-void lista_cruz_percorrer(const LISTA_CRUZ *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
-    if(lc == NULL || visita == NULL) return;
+size_t lista_cruz_percorrer_limite(const LISTA_CRUZ *lc, size_t limite,
+                                   void (*visita)(ITEM *item, void *ctx), void *ctx){
+    if(lc == NULL || visita == NULL) return 0;
 
+    size_t visitados = 0;
     CABECALHO *lin = lc->linhas;
 
     while(lin != NULL){
         CELULA *atual = lin->primeiro;
         while(atual != NULL){
+            if(limite != 0 && visitados >= limite) return visitados;
             visita(atual->item, ctx);
+            visitados++;
             atual = atual->direita;
         }
         lin = lin->prox;
     }
+    return visitados;
+}
+
+void lista_cruz_percorrer(const LISTA_CRUZ *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
+    (void) lista_cruz_percorrer_limite(lc, 0, visita, ctx);
 }

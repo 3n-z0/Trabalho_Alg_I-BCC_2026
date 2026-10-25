@@ -1,6 +1,7 @@
 #ifndef ITEM_H
     #define ITEM_H
     #include <stdbool.h>
+    #include <stddef.h>
     
     typedef struct item_ ITEM;
 
@@ -55,4 +56,7 @@
 
     void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t tam_dest);
     double item_get_campo_num(const ITEM *item, const char *campo);
+
+    //true se o campo e lido por item_get_campo_num (os mesmos campos);
+    bool item_campo_eh_numerico(const char *campo);
 #endif

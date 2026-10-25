@@ -106,3 +106,21 @@ int lista_enc_tamanho(const LISTA_ENC *l) {
     if (l == NULL) return 0;
     return l->tamanho;
 }
+
+size_t lista_enc_percorrer_limite(const LISTA_ENC *l, size_t limite,
+                                void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    if (l == NULL || visita == NULL) return 0;
+
+    size_t visitados = 0;
+    for (NO *atual = l->inicio; atual != NULL; atual = atual->proximo) {
+        if (limite != 0 && visitados >= limite) break;
+        visita(atual->item, ctx);
+        visitados++;
+    }
+    return visitados;
+}
+
+void lista_enc_percorrer(const LISTA_ENC *l,
+                        void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    (void) lista_enc_percorrer_limite(l, 0, visita, ctx);
+}

@@ -73,4 +73,22 @@ bool pilha_vazia(const PILHA *p) {
 int pilha_tamanho(const PILHA *p) {
     if (p == NULL) return 0;
     return p->tamanho;
-}   
+}
+
+size_t pilha_percorrer_limite(const PILHA *p, size_t limite,
+                            void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    if (p == NULL || visita == NULL) return 0;
+
+    size_t visitados = 0;
+    for (NO *atual = p->topo; atual != NULL; atual = atual->proximo) {
+        if (limite != 0 && visitados >= limite) break;
+        visita(atual->item, ctx);
+        visitados++;
+    }
+    return visitados;
+}
+
+void pilha_percorrer(const PILHA *p,
+                    void (*visita)(ITEM *item, void *ctx), void *ctx) {
+    (void) pilha_percorrer_limite(p, 0, visita, ctx);
+}
