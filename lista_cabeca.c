@@ -52,8 +52,6 @@ void lista_cabeca_apagar(LISTA_CABECA **lista_cabeca){
 
     free(*lista_cabeca);
     *lista_cabeca = NULL;
-
-    return;
 }
 
 bool lista_cabeca_inserir_fim(LISTA_CABECA *lista_cabeca, ITEM *item){
@@ -114,7 +112,27 @@ void lista_cabeca_percorrer(const LISTA_CABECA *lc, void (*visita)(ITEM *item, v
     (void) lista_cabeca_percorrer_limite(lc, 0, visita, ctx);
 }
 
-ITEM *lista_cabeca_buscar(const LISTA_CABECA *l, int pos){
+/* Devolve o no ANTERIOR ao primeiro ITEM que satisfaz o criterio, ou o
+ * ultimo no se nenhum satisfizer. Como a busca parte do no cabeca, sempre
+ * existe um anterior, inclusive para o primeiro registro: o laco nao testa
+ * lista vazia nem trata o inicio como caso especial, e uma remocao por
+ * criterio poderia religar anterior->prox direto a partir deste no. */
+static NO *anterior_de(const LISTA_CABECA *l, bool (*criterio)(const ITEM *item, void *ctx), void *ctx){
+    NO *anterior = l->cabeca;
+    while(anterior->prox != NULL && !criterio(anterior->prox->item, ctx)){
+        anterior = anterior->prox;
+    }
+    return anterior;
+}
+
+ITEM *lista_cabeca_buscar(const LISTA_CABECA *l, bool (*criterio)(const ITEM *item, void *ctx), void *ctx){
+    if (l == NULL || criterio == NULL) return NULL;
+
+    NO *anterior = anterior_de(l, criterio, ctx);
+    return anterior->prox != NULL ? anterior->prox->item : NULL;
+}
+
+ITEM *lista_cabeca_obter(const LISTA_CABECA *l, int pos){
     if (l == NULL || pos < 0 || pos >= l->tam) return NULL;
 
     NO *atual = l->cabeca->prox;
@@ -124,4 +142,34 @@ ITEM *lista_cabeca_buscar(const LISTA_CABECA *l, int pos){
     return atual->item;
 }
 
+int lista_cabeca_tamanho(const LISTA_CABECA *l){
+    if (l == NULL) return 0;
+    return l->tam; //o no cabeca nao e contado;
+}
+
+bool lista_cabeca_vazia(const LISTA_CABECA *l){
+    //com no cabeca, vazia = cabeca sem sucessor;
+    return l == NULL || l->cabeca->prox == NULL;
+}
+
+ITEM *lista_cabeca_remover(LISTA_CABECA *lc, int pos){
+    if (lc == NULL || pos < 0 || pos >= lc->tam) return NULL;
+
+    //comeca no no cabeca: remover o primeiro nao precisa de caso especial;
+    NO *anterior = lc->cabeca;
+    for (int i = 0; i < pos; i++) {
+        anterior = anterior->prox;
+    }
+    NO *atual = anterior->prox;
+
+    anterior->prox = atual->prox;
+    if (atual == lc->fim) lc->fim = anterior; //removeu o ultimo;
+    lc->tam--;
+
+    ITEM *item = atual->item;
+    free(atual);
+    atual = NULL;
+
+    return item;
+}
 

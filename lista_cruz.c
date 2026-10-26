@@ -12,7 +12,7 @@ typedef struct celula_
 }CELULA;
 
 typedef struct cabecalho_ {
-    char chave[64];
+    char *chave; //copia alocada no tamanho exato do valor;
     CELULA *primeiro;
     CELULA *ultimo;
     struct cabecalho_ *prox;
@@ -52,8 +52,13 @@ static CABECALHO *criar_ou_encontrar_cabecalho(CABECALHO **lista_cabecalhos, con
 
     if(novo == NULL) return NULL;
 
-    strncpy(novo->chave, chave, sizeof(novo->chave) - 1);
-    novo->chave[sizeof(novo->chave) - 1] = '\0';
+    size_t tamanho = strlen(chave) + 1;
+    novo->chave = (char*)malloc(tamanho);
+    if(novo->chave == NULL){
+        free(novo);
+        return NULL;
+    }
+    memcpy(novo->chave, chave, tamanho);
     novo->primeiro = NULL;
     novo->ultimo = NULL;
     novo->prox = NULL;
@@ -120,14 +125,17 @@ void lista_cruz_apagar(LISTA_CRUZ **lc){
 
         CABECALHO *apaga = lin;
         lin = lin->prox;
+        free(apaga->chave);
         free(apaga);
     }
-    
+
+    //as celulas ja foram liberadas pelas linhas; aqui so os cabecalhos de coluna;
     CABECALHO *col = (*lc)->colunas;
     while(col){
         CABECALHO *apaga = col;
         col = col->prox;
 
+        free(apaga->chave);
         free(apaga);
     }
 
@@ -135,8 +143,8 @@ void lista_cruz_apagar(LISTA_CRUZ **lc){
     *lc = NULL;
 }
 
-size_t lista_cruz_percorrer_limite(const LISTA_CRUZ *lc, size_t limite,
-                                   void (*visita)(ITEM *item, void *ctx), void *ctx){
+size_t lista_cruz_percorrer_linhas_limite(const LISTA_CRUZ *lc, size_t limite,
+                                          void (*visita)(ITEM *item, void *ctx), void *ctx){
     if(lc == NULL || visita == NULL) return 0;
 
     size_t visitados = 0;
@@ -155,6 +163,30 @@ size_t lista_cruz_percorrer_limite(const LISTA_CRUZ *lc, size_t limite,
     return visitados;
 }
 
-void lista_cruz_percorrer(const LISTA_CRUZ *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
-    (void) lista_cruz_percorrer_limite(lc, 0, visita, ctx);
+void lista_cruz_percorrer_linhas(const LISTA_CRUZ *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
+    (void) lista_cruz_percorrer_linhas_limite(lc, 0, visita, ctx);
+}
+
+size_t lista_cruz_percorrer_colunas_limite(const LISTA_CRUZ *lc, size_t limite,
+                                           void (*visita)(ITEM *item, void *ctx), void *ctx){
+    if(lc == NULL || visita == NULL) return 0;
+
+    size_t visitados = 0;
+    CABECALHO *col = lc->colunas;
+
+    while(col != NULL){
+        CELULA *atual = col->primeiro;
+        while(atual != NULL){
+            if(limite != 0 && visitados >= limite) return visitados;
+            visita(atual->item, ctx);
+            visitados++;
+            atual = atual->abaixo;
+        }
+        col = col->prox;
+    }
+    return visitados;
+}
+
+void lista_cruz_percorrer_colunas(const LISTA_CRUZ *lc, void (*visita)(ITEM *item, void *ctx), void *ctx){
+    (void) lista_cruz_percorrer_colunas_limite(lc, 0, visita, ctx);
 }

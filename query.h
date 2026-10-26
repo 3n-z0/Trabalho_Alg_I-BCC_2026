@@ -22,4 +22,7 @@
 
     const char *query_get_order_campo(QUERY *query);
 
+    //"ASC", "DESC" ou "" se a consulta nao tiver ORDER;
+    const char *query_get_order_direcao(QUERY *query);
+
 #endif

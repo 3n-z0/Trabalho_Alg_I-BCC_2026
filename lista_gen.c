@@ -82,16 +82,6 @@ static NO *criar_no_sublista(const char *chave) {
     return no;
 }
 
-LISTA_GEN *lista_gen_inserir_sublista(LISTA_GEN *lista) {
-    if (lista == NULL) return NULL;
-
-    NO *no = criar_no_sublista(NULL);
-    if (no == NULL) return NULL;
-
-    anexar_no(lista, no);
-    return no->info.sublista;
-}
-
 static NO *encontrar_grupo(const LISTA_GEN *lista, const char *chave) {
     for (NO *atual = lista->inicio; atual != NULL; atual = atual->prox) {
         if (atual->tipo == TIPO_SUBLISTA && atual->chave != NULL &&

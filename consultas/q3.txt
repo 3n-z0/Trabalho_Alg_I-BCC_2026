@@ -1,0 +1,6 @@
+FILTER|on_sentry_list|==|true
+SIM|absolute_magnitude|22.0|5.0|1.0
+ACCEPT|0.5
+ORDER|threat_category|ASC
+GROUP|year|month
+CROSS|threat_category|panic_level

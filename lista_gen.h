@@ -15,9 +15,6 @@ typedef struct lista_gen_ LISTA_GEN;
 LISTA_GEN *lista_gen_criar(void);
 bool lista_gen_inserir_atomo(LISTA_GEN *lista, ITEM *item);
 
-/* A sublista retornada pertence a lista. Nao a apague separadamente. */
-LISTA_GEN *lista_gen_inserir_sublista(LISTA_GEN *lista);
-
 /*
  * Organiza: lista -> grupo -> subgrupo -> ITEM.
  * Recebe os VALORES dos campos definidos em GROUP, ja extraidos pelo cliente;
