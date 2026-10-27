@@ -1,4 +1,4 @@
-FILTER|is_future_event|==|true
+FILTER|on_sentry_list|==|true
 FILTER|distance_au|<=|0.08
 SIM|velocity_km_s|15.0|10.0|1.0
 SIM|risk_score|0.70|0.30|2.0

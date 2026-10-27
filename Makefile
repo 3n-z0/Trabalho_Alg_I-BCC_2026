@@ -3,7 +3,8 @@ CFLAGS  = -std=c99 -Wall -Wextra -pedantic -O2
 LDLIBS  = -lm
 
 EXEC    = trabalho
-FONTES  = main.c busca.c estrutura.c leitor_nasa.c query.c item.c tempo.c \
+FONTES  = main.c busca.c estrutura.c leitor.c leitor_nasa.c leitor_sti.c csv.c saida.c \
+          query.c item.c item_nasa.c item_sti.c tempo.c \
           pilha.c fila.c lista_seq.c lista_enc.c lista_cabeca.c \
           lista_ord.c lista_gen.c lista_cruz.c
 OBJETOS = $(FONTES:.c=.o)

@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "busca.h"
-#include "leitor_nasa.h"
+#include "leitor.h"
+#include "saida.h"
 #include "tempo.h"
 
 /* A main coordena o fluxo; cada modulo conhece sua parte do trabalho. */
@@ -13,13 +14,15 @@ typedef struct {
 
 static void uso(FILE *saida, const char *programa) {
     fprintf(saida,
-        "Uso: %s --reader nasa --input dados.csv --base ESTRUTURA\n"
+        "Uso: %s --reader LEITOR --input dados.csv --base ESTRUTURA\n"
         "       --result ESTRUTURA --query consulta.txt --output resultado.csv\n"
         "       [--top-k N] [--limit N]\n\n"
+        "Leitores: ", programa);
+    leitor_listar(saida);
+    fprintf(saida, ".\n"
         "Estruturas: pilha, fila, lista_seq, lista_enc, lista_cabeca,\n"
         "            lista_ord, lista_gen, lista_cruz.\n"
-        "top-k e limit: inteiros nao negativos; 0 significa todos (padrao).\n",
-        programa);
+        "top-k e limit: inteiros nao negativos; 0 significa todos (padrao).\n");
 }
 
 static bool ler_quantidade(const char *texto, size_t *valor) {
@@ -59,11 +62,12 @@ static bool ler_argumentos(int argc, char **argv, Opcoes *opcoes) {
 
 /* Usada no encerramento normal e em cada retorno apos alocar recursos.
  * As funcoes chamadas aceitam ponteiros NULL, inclusive em criacao parcial. */
-static void liberar_recursos(QUERY **query, ESTRUTURA **base,
-                             ESTRUTURA **resultado, LEITOR_NASA **leitor) {
+static void liberar_recursos(QUERY **query, ESTRUTURA **base, ESTRUTURA **resultado,
+                             const LEITOR_TIPO *tipo_leitor, void **leitor) {
     estrutura_apagar(resultado, false);
     estrutura_apagar(base, true);
-    leitor_nasa_fechar(leitor);
+    if (*leitor) tipo_leitor->fechar(*leitor);
+    *leitor = NULL;
     query_apagar(query);
 }
 
@@ -88,8 +92,11 @@ int main(int argc, char **argv) {
         uso(stderr, argv[0]);
         return falhar();
     }
-    if (strcmp(op.reader, "nasa")) {
-        fprintf(stderr, "Erro: leitor '%s' ainda nao implementado. Disponivel: nasa.\n", op.reader);
+    const LEITOR_TIPO *tipo_leitor = leitor_tipo(op.reader);
+    if (!tipo_leitor) {
+        fprintf(stderr, "Erro: leitor '%s' desconhecido. Disponiveis: ", op.reader);
+        leitor_listar(stderr);
+        fprintf(stderr, ".\n");
         return falhar();
     }
     if (!estrutura_tipo(op.base, &tipo_base) || !estrutura_tipo(op.result, &tipo_resultado)) {
@@ -103,40 +110,43 @@ int main(int argc, char **argv) {
 
     QUERY *query = NULL;
     ESTRUTURA *base = NULL, *resultado = NULL;
-    LEITOR_NASA *leitor = NULL;
+    void *leitor = NULL; /* estado do leitor escolhido; so tipo_leitor sabe o que e */
     size_t carregados = 0, gravados = 0;
     ESTATISTICAS_BUSCA estatisticas = {0};
 
-    /* 2. Carregar consulta e criar dois TADs independentes. */
+    /* 2. Carregar consulta e criar dois TADs independentes. O dataset vem
+     * antes da consulta: query_criar valida os campos pelo item_campo_tipo. */
+    item_definir_dataset(tipo_leitor->ops);
     query = query_criar(op.query);
     if (!query) {
         fprintf(stderr, "Erro: consulta inacessivel, invalida ou falta de memoria: %s\n", op.query);
-        liberar_recursos(&query, &base, &resultado, &leitor);
+        liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
         return falhar();
     }
     base = estrutura_criar(tipo_base, query);
     resultado = estrutura_criar(tipo_resultado, query);
     if (!base || !resultado) {
         fprintf(stderr, "Erro: nao foi possivel criar as estruturas.\n");
-        liberar_recursos(&query, &base, &resultado, &leitor);
+        liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
         return falhar();
     }
 
     /* 3. Cada registro vai diretamente para a estrutura indicada por --base. */
     double inicio = tempo_agora_ms();
-    leitor = leitor_nasa_abrir(op.input);
+    leitor = tipo_leitor->abrir(op.input);
     if (!leitor) {
-        fprintf(stderr, "Erro: arquivo inacessivel, cabecalho NASA invalido ou falta de memoria.\n");
-        liberar_recursos(&query, &base, &resultado, &leitor);
+        fprintf(stderr, "Erro: arquivo inacessivel, cabecalho invalido para o leitor '%s' ou falta de memoria.\n",
+                tipo_leitor->nome);
+        liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
         return falhar();
     }
     while (op.limit == 0 || carregados < op.limit) {
         ITEM *item = NULL;
-        int estado = leitor_nasa_proximo(leitor, &item);
+        int estado = tipo_leitor->proximo(leitor, &item);
         if (estado == 0) break;
         if (estado < 0) {
             fprintf(stderr, "Erro ao ler o registro %zu do CSV.\n", carregados + 1);
-            liberar_recursos(&query, &base, &resultado, &leitor);
+            liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
             return falhar();
         }
         double sim = 0.0;
@@ -145,7 +155,7 @@ int main(int argc, char **argv) {
         if (!estrutura_inserir(base, item, sim)) {
             item_apagar(&item); /* Ainda nao pertence a base. */
             fprintf(stderr, "Erro ao inserir na base: memoria insuficiente.\n");
-            liberar_recursos(&query, &base, &resultado, &leitor);
+            liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
             return falhar();
         }
         carregados++;
@@ -155,15 +165,15 @@ int main(int argc, char **argv) {
     /* 4. Percorrer a base, avaliar a consulta e inserir todos os aprovados. */
     if (!buscar(base, query, resultado, &estatisticas)) {
         fprintf(stderr, "Erro ao armazenar os resultados da busca.\n");
-        liberar_recursos(&query, &base, &resultado, &leitor);
+        liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
         return falhar();
     }
 
     /* 5. top-k limita somente a exportacao, sem reduzir MATCHED_RECORDS. */
     inicio = tempo_agora_ms();
-    if (!leitor_nasa_salvar(leitor, op.output, resultado, op.top_k, &gravados)) {
+    if (!saida_gravar(op.output, tipo_leitor->cabecalho(leitor), resultado, op.top_k, &gravados)) {
         fprintf(stderr, "Erro ao gravar a saida: %s\n", op.output);
-        liberar_recursos(&query, &base, &resultado, &leitor);
+        liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
         return falhar();
     }
     double escrita_ms = tempo_agora_ms() - inicio;
@@ -172,6 +182,6 @@ int main(int argc, char **argv) {
            carregados, estatisticas.encontrados, gravados, carga_ms,
            estatisticas.busca_ms, estatisticas.insercao_ms, escrita_ms);
     /* 6. Resultado empresta ITEMs da base; somente a base os libera. */
-    liberar_recursos(&query, &base, &resultado, &leitor);
+    liberar_recursos(&query, &base, &resultado, tipo_leitor, &leitor);
     return EXIT_SUCCESS;
 }

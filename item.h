@@ -2,64 +2,13 @@
     #define ITEM_H
     #include <stdbool.h>
     #include <stddef.h>
-    
+
+    /* ITEM generico: um registro de qualquer dataset. Guarda os dados
+     * especificos (struct do dataset, opaca aqui), as funcoes que sabem
+     * le-los (ITEM_OPS) e a linha original do CSV. Estruturas, query,
+     * busca e estrutura.c so usam esta interface. */
     typedef struct item_ ITEM;
 
-    //os textos sao copiados no tamanho exato (sem limite); NULL vira "";
-    ITEM *item_criar(
-        const char *asteroid_designation,
-        const char *asteroid_fullname,
-        const char *close_approach_date,
-        unsigned int year,
-        unsigned int month,
-        double distance_au,
-        double velocity_km_s,
-        float absolute_magnitude,
-        int days_until_approach,
-        bool is_past_event,
-        bool is_future_event,
-        double risk_score,
-        unsigned int panic_level,
-        const char *threat_category,
-        const char *panic_verdict,
-        bool on_sentry_list,
-        const char *sentry_impact_prob,
-        float sentry_torino_scale,
-        float sentry_palermo_scale,
-        float sentry_diameter_km
-    );
-    void item_apagar(ITEM **item);
-
-//linha original do CSV (copiada), para gravar a saida no mesmo formato da entrada;
-    bool item_set_linha_original(ITEM *item, const char *linha);
-    const char *item_get_linha_original(const ITEM *item); //NULL se nao definida;
-
-//getters para strings;
-    const char *item_get_asteroid_designation(const ITEM *item);
-    const char *item_get_asteroid_fullname(const ITEM *item);
-    const char *item_get_close_approach_date(const ITEM *item);
-    const char *item_get_threat_category(const ITEM *item);
-    const char *item_get_panic_verdict(const ITEM *item);
-    
-//getters para numéricos e booleanos;
-    unsigned int item_get_year(const ITEM *item);
-    unsigned int item_get_month(const ITEM *item);
-    double item_get_distance_au(const ITEM *item);
-    double item_get_velocity_km_s(const ITEM *item);
-    float item_get_absolute_magnitude(const ITEM *item);
-    int item_get_days_until_approach(const ITEM *item);
-    bool item_get_is_past_event(const ITEM *item);
-    bool item_get_is_future_event(const ITEM *item);
-    double item_get_risk_score(const ITEM *item);
-    unsigned int item_get_panic_level(const ITEM *item);
-    bool item_get_on_sentry_list(const ITEM *item);
-    
-    const char *item_get_sentry_impact_prob(const ITEM *item);
-    float item_get_sentry_torino_scale(const ITEM *item);
-    float item_get_sentry_palermo_scale(const ITEM *item);
-    float item_get_sentry_diameter_km(const ITEM *item);
-
-//acesso a campos pelo nome da coluna (ex.: "distance_au");
     typedef enum {
         CAMPO_DESCONHECIDO,
         CAMPO_TEXTO,
@@ -67,11 +16,41 @@
         CAMPO_BOOL
     } TIPO_CAMPO;
 
-    //tipo do campo; CAMPO_DESCONHECIDO se o nome nao existir ou for NULL;
+    /* Operacoes que cada dataset implementa (item_nasa.c, item_sti.c...).
+     * "dados" e a struct propria do dataset, criada pelo seu leitor. */
+    typedef struct {
+        const char *nome; //ex.: "nasa", "sti";
+        TIPO_CAMPO (*campo_tipo)(const char *campo);
+        const char *(*get_texto)(const void *dados, const char *campo); //NULL se ausente;
+        double (*get_num)(const void *dados, const char *campo);       //NaN se ausente;
+        bool (*get_bool)(const void *dados, const char *campo);
+        //opcional (pode ser NULL): formatacao propria em texto (casas decimais, "N/A"...);
+        void (*formatar)(const void *dados, const char *campo, char *dest, size_t tam);
+        void (*apagar_dados)(void *dados);
+    } ITEM_OPS;
+
+    //dataset da execucao; a main define a partir de --reader, antes de query_criar;
+    void item_definir_dataset(const ITEM_OPS *ops);
+    const ITEM_OPS *item_dataset(void);
+
+    //envolve os dados de um registro; o ITEM passa a ser dono de "dados";
+    ITEM *item_criar(const ITEM_OPS *ops, void *dados);
+    void item_apagar(ITEM **item);
+
+    //acesso a struct do dataset, para os getters especificos (ex.: item_nasa.c);
+    const void *item_get_dados(const ITEM *item);
+    const ITEM_OPS *item_get_ops(const ITEM *item);
+
+//linha original do CSV (copiada), para gravar a saida no mesmo formato da entrada;
+    bool item_set_linha_original(ITEM *item, const char *linha);
+    const char *item_get_linha_original(const ITEM *item); //NULL se nao definida;
+
+//acesso a campos pelo nome da coluna (ex.: "distance_au", "TOTAL");
+    //tipo no dataset da execucao; CAMPO_DESCONHECIDO se nao existir ou sem dataset;
     TIPO_CAMPO item_campo_tipo(const char *campo);
 
     //cada getter so responde a campos do seu tipo: texto devolve NULL,
-    //numero devolve 0.0 e bool devolve false para os demais ou para ausentes;
+    //numero devolve 0.0 e bool devolve false para os demais;
     const char *item_get_campo_texto(const ITEM *item, const char *campo);
     double item_get_campo_num(const ITEM *item, const char *campo);
     bool item_get_campo_bool(const ITEM *item, const char *campo);
