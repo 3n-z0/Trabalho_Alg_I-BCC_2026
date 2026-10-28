@@ -5,8 +5,10 @@
 #include <math.h>
 #include "item.h"
 
+//TAD item generico;
+
 /* Despachante: nao conhece nenhuma coluna. Cada pergunta sobre um campo
- * e repassada as ITEM_OPS do dataset dono do registro. */
+ * eh repassada as ITEM_OPS do dataset dono do registro. */
 struct item_
 {
     const ITEM_OPS *ops;  //funcoes do dataset deste registro;
@@ -63,11 +65,12 @@ const ITEM_OPS *item_get_ops(const ITEM *item){
 }
 
 bool item_set_linha_original(ITEM *item, const char *linha){
+//linha original do csv eh guardada para possível impressao em arquivo de resposta;
     if(item == NULL || linha == NULL){
         return false;
     }
     size_t tamanho = strlen(linha) + 1;
-    char *copia = (char*)malloc(tamanho);
+    char *copia = (char*)malloc(tamanho);//copia string dinamicamente;
     if(copia == NULL){
         return false;
     }

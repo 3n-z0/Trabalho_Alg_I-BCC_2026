@@ -9,6 +9,8 @@
      * busca e estrutura.c so usam esta interface. */
     typedef struct item_ ITEM;
 
+
+    //constantes de tipo de campo;
     typedef enum {
         CAMPO_DESCONHECIDO,
         CAMPO_TEXTO,
