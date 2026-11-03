@@ -3,15 +3,17 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stddef.h>
+#include <math.h>
 #include "item.h"
 #include "item_nasa.h"
 
 typedef struct //struct será alocada exclusivamente se on_sentry_info == true;
 {
-    float sentry_torino_scale;
-    float sentry_palermo_scale;
-    float sentry_diameter_km;
-    char *sentry_impact_prob;
+    //double, como na query: float mudaria o valor lido (25.3 viraria 25.2999992...);
+    double sentry_torino_scale;
+    double sentry_palermo_scale;
+    double sentry_diameter_km;
+    double sentry_impact_prob;
 }SentryInfo;
 
 /* Dados de um asteroide. Fica dentro de um ITEM generico (item.c), que
@@ -35,7 +37,7 @@ typedef struct
     unsigned int year, month;
     unsigned int panic_level;
     int days_until_approach;
-    float absolute_magnitude;
+    double absolute_magnitude;
 
     //1 byte;
     bool on_sentry_list;
@@ -58,10 +60,7 @@ static void nasa_apagar(void *dados){
     if(a == NULL){
         return;
     }
-    if(a->sentry_info != NULL){
-        free(a->sentry_info->sentry_impact_prob);
-        free(a->sentry_info);
-    }
+    free(a->sentry_info);
     free(a->threat_category);
     free(a->panic_verdict);
     free(a->asteroid_designation);
@@ -78,7 +77,7 @@ unsigned int year,
 unsigned int month,
 double distance_au,
 double velocity_km_s,
-float absolute_magnitude,
+double absolute_magnitude,
 int days_until_approach,
 bool is_past_event,
 bool is_future_event,
@@ -87,10 +86,10 @@ unsigned int panic_level,
 const char *threat_category,
 const char *panic_verdict,
 bool on_sentry_list,
-const char *sentry_impact_prob,
-float sentry_torino_scale,
-float sentry_palermo_scale,
-float sentry_diameter_km){
+double sentry_impact_prob,
+double sentry_torino_scale,
+double sentry_palermo_scale,
+double sentry_diameter_km){
     //calloc: ponteiros comecam NULL, entao nasa_apagar libera com seguranca
     //um registro criado pela metade, se alguma alocacao abaixo falhar;
     ITEM_NASA *a = (ITEM_NASA*)calloc(1, sizeof(ITEM_NASA));
@@ -107,7 +106,7 @@ float sentry_diameter_km){
         a->sentry_info->sentry_torino_scale = sentry_torino_scale;
         a->sentry_info->sentry_palermo_scale = sentry_palermo_scale;
         a->sentry_info->sentry_diameter_km = sentry_diameter_km;
-        a->sentry_info->sentry_impact_prob = copiar_texto(sentry_impact_prob);
+        a->sentry_info->sentry_impact_prob = sentry_impact_prob;
     }
 
     a->asteroid_designation = copiar_texto(asteroid_designation);
@@ -118,8 +117,7 @@ float sentry_diameter_km){
 
     if(a->asteroid_designation == NULL || a->asteroid_fullname == NULL ||
        a->close_approach_date == NULL || a->threat_category == NULL ||
-       a->panic_verdict == NULL ||
-       (a->sentry_info != NULL && a->sentry_info->sentry_impact_prob == NULL)){
+       a->panic_verdict == NULL){
         nasa_apagar(a);
         return NULL;
     }
@@ -197,9 +195,9 @@ double item_get_velocity_km_s(const ITEM *item) {
     return a ? a->velocity_km_s : 0.0;
 }
 
-float item_get_absolute_magnitude(const ITEM *item) {
+double item_get_absolute_magnitude(const ITEM *item) {
     const ITEM_NASA *a = nasa(item);
-    return a ? a->absolute_magnitude : 0.0f;
+    return a ? a->absolute_magnitude : 0.0;
 }
 
 int item_get_days_until_approach(const ITEM *item) {
@@ -232,34 +230,34 @@ bool item_get_on_sentry_list(const ITEM *item) {
     return a ? a->on_sentry_list : false;
 }
 
-const char *item_get_sentry_impact_prob(const ITEM *item) {
+double item_get_sentry_impact_prob(const ITEM *item) {
     const ITEM_NASA *a = nasa(item);
     if (a == NULL || !a->on_sentry_list || a->sentry_info == NULL) {
-        return NULL;
+        return NAN;
     }
     return a->sentry_info->sentry_impact_prob;
 }
 
-float item_get_sentry_torino_scale(const ITEM *item) {
+double item_get_sentry_torino_scale(const ITEM *item) {
     const ITEM_NASA *a = nasa(item);
     if (a == NULL || !a->on_sentry_list || a->sentry_info == NULL) {
-        return 0.0f;
+        return NAN;
     }
     return a->sentry_info->sentry_torino_scale;
 }
 
-float item_get_sentry_palermo_scale(const ITEM *item) {
+double item_get_sentry_palermo_scale(const ITEM *item) {
     const ITEM_NASA *a = nasa(item);
     if (a == NULL || !a->on_sentry_list || a->sentry_info == NULL) {
-        return 0.0f;
+        return NAN;
     }
     return a->sentry_info->sentry_palermo_scale;
 }
 
-float item_get_sentry_diameter_km(const ITEM *item) {
+double item_get_sentry_diameter_km(const ITEM *item) {
     const ITEM_NASA *a = nasa(item);
     if (a == NULL || !a->on_sentry_list || a->sentry_info == NULL) {
-        return 0.0f;
+        return NAN;
     }
     return a->sentry_info->sentry_diameter_km;
 }
@@ -276,7 +274,6 @@ typedef enum {
     CP_CLOSE_APPROACH_DATE,
     CP_THREAT_CATEGORY,
     CP_PANIC_VERDICT,
-    CP_SENTRY_IMPACT_PROB,
     //numericos;
     CP_YEAR,
     CP_MONTH,
@@ -286,6 +283,7 @@ typedef enum {
     CP_DAYS_UNTIL_APPROACH,
     CP_RISK_SCORE,
     CP_PANIC_LEVEL,
+    CP_SENTRY_IMPACT_PROB,
     CP_SENTRY_TORINO_SCALE,
     CP_SENTRY_PALERMO_SCALE,
     CP_SENTRY_DIAMETER_KM,
@@ -299,31 +297,30 @@ typedef enum {
 typedef struct {
     const char *nome;
     TIPO_CAMPO tipo;
-    int casas;       //casas decimais usadas por nasa_formatar (so numericos);
-    bool so_sentry;  //sem valor quando o asteroide nao esta na lista Sentry;
+    int casas; //casas decimais usadas por nasa_formatar (so numericos); -1: %g;
 } DESCRITOR_CAMPO;
 
 static const DESCRITOR_CAMPO CAMPOS[CP_QTD] = {
-    [CP_ASTEROID_DESIGNATION] = {"asteroid_designation", CAMPO_TEXTO,  0, false},
-    [CP_ASTEROID_FULLNAME]    = {"asteroid_fullname",    CAMPO_TEXTO,  0, false},
-    [CP_CLOSE_APPROACH_DATE]  = {"close_approach_date",  CAMPO_TEXTO,  0, false},
-    [CP_THREAT_CATEGORY]      = {"threat_category",      CAMPO_TEXTO,  0, false},
-    [CP_PANIC_VERDICT]        = {"panic_verdict",        CAMPO_TEXTO,  0, false},
-    [CP_SENTRY_IMPACT_PROB]   = {"sentry_impact_prob",   CAMPO_TEXTO,  0, true},
-    [CP_YEAR]                 = {"year",                 CAMPO_NUMERO, 0, false},
-    [CP_MONTH]                = {"month",                CAMPO_NUMERO, 0, false},
-    [CP_DISTANCE_AU]          = {"distance_au",          CAMPO_NUMERO, 4, false},
-    [CP_VELOCITY_KM_S]        = {"velocity_km_s",        CAMPO_NUMERO, 2, false},
-    [CP_ABSOLUTE_MAGNITUDE]   = {"absolute_magnitude",   CAMPO_NUMERO, 2, false},
-    [CP_DAYS_UNTIL_APPROACH]  = {"days_until_approach",  CAMPO_NUMERO, 0, false},
-    [CP_RISK_SCORE]           = {"risk_score",           CAMPO_NUMERO, 4, false},
-    [CP_PANIC_LEVEL]          = {"panic_level",          CAMPO_NUMERO, 0, false},
-    [CP_SENTRY_TORINO_SCALE]  = {"sentry_torino_scale",  CAMPO_NUMERO, 1, true},
-    [CP_SENTRY_PALERMO_SCALE] = {"sentry_palermo_scale", CAMPO_NUMERO, 2, true},
-    [CP_SENTRY_DIAMETER_KM]   = {"sentry_diameter_km",   CAMPO_NUMERO, 3, true},
-    [CP_IS_PAST_EVENT]        = {"is_past_event",        CAMPO_BOOL,   0, false},
-    [CP_IS_FUTURE_EVENT]      = {"is_future_event",      CAMPO_BOOL,   0, false},
-    [CP_ON_SENTRY_LIST]       = {"on_sentry_list",       CAMPO_BOOL,   0, false}
+    [CP_ASTEROID_DESIGNATION] = {"asteroid_designation", CAMPO_TEXTO,  0},
+    [CP_ASTEROID_FULLNAME]    = {"asteroid_fullname",    CAMPO_TEXTO,  0},
+    [CP_CLOSE_APPROACH_DATE]  = {"close_approach_date",  CAMPO_TEXTO,  0},
+    [CP_THREAT_CATEGORY]      = {"threat_category",      CAMPO_TEXTO,  0},
+    [CP_PANIC_VERDICT]        = {"panic_verdict",        CAMPO_TEXTO,  0},
+    [CP_YEAR]                 = {"year",                 CAMPO_NUMERO, 0},
+    [CP_MONTH]                = {"month",                CAMPO_NUMERO, 0},
+    [CP_DISTANCE_AU]          = {"distance_au",          CAMPO_NUMERO, 4},
+    [CP_VELOCITY_KM_S]        = {"velocity_km_s",        CAMPO_NUMERO, 2},
+    [CP_ABSOLUTE_MAGNITUDE]   = {"absolute_magnitude",   CAMPO_NUMERO, 2},
+    [CP_DAYS_UNTIL_APPROACH]  = {"days_until_approach",  CAMPO_NUMERO, 0},
+    [CP_RISK_SCORE]           = {"risk_score",           CAMPO_NUMERO, 4},
+    [CP_PANIC_LEVEL]          = {"panic_level",          CAMPO_NUMERO, 0},
+    [CP_SENTRY_IMPACT_PROB]   = {"sentry_impact_prob",   CAMPO_NUMERO, -1},
+    [CP_SENTRY_TORINO_SCALE]  = {"sentry_torino_scale",  CAMPO_NUMERO, 1},
+    [CP_SENTRY_PALERMO_SCALE] = {"sentry_palermo_scale", CAMPO_NUMERO, 2},
+    [CP_SENTRY_DIAMETER_KM]   = {"sentry_diameter_km",   CAMPO_NUMERO, 3},
+    [CP_IS_PAST_EVENT]        = {"is_past_event",        CAMPO_BOOL,   0},
+    [CP_IS_FUTURE_EVENT]      = {"is_future_event",      CAMPO_BOOL,   0},
+    [CP_ON_SENTRY_LIST]       = {"on_sentry_list",       CAMPO_BOOL,   0}
 };
 
 //indice do campo em CAMPOS, ou -1 se o nome nao existir;
@@ -343,14 +340,12 @@ static const char *texto_por_id(const ITEM_NASA *a, int id){
         case CP_CLOSE_APPROACH_DATE:  return a->close_approach_date;
         case CP_THREAT_CATEGORY:      return a->threat_category;
         case CP_PANIC_VERDICT:        return a->panic_verdict;
-        case CP_SENTRY_IMPACT_PROB:
-            return (a->on_sentry_list && a->sentry_info) ? a->sentry_info->sentry_impact_prob : NULL;
         default:                      return NULL;
     }
 }
 
 static double num_por_id(const ITEM_NASA *a, int id){
-    //campos Sentry valem 0 fora da lista Sentry, como nos getters especificos;
+    //campos Sentry sao ausentes (NaN) fora da lista Sentry, como nos getters especificos;
     const SentryInfo *s = (a->on_sentry_list && a->sentry_info) ? a->sentry_info : NULL;
 
     switch (id) {
@@ -358,13 +353,14 @@ static double num_por_id(const ITEM_NASA *a, int id){
         case CP_MONTH:                return (double) a->month;
         case CP_DISTANCE_AU:          return a->distance_au;
         case CP_VELOCITY_KM_S:        return a->velocity_km_s;
-        case CP_ABSOLUTE_MAGNITUDE:   return (double) a->absolute_magnitude;
+        case CP_ABSOLUTE_MAGNITUDE:   return a->absolute_magnitude;
         case CP_DAYS_UNTIL_APPROACH:  return (double) a->days_until_approach;
         case CP_RISK_SCORE:           return a->risk_score;
         case CP_PANIC_LEVEL:          return (double) a->panic_level;
-        case CP_SENTRY_TORINO_SCALE:  return s ? (double) s->sentry_torino_scale : 0.0;
-        case CP_SENTRY_PALERMO_SCALE: return s ? (double) s->sentry_palermo_scale : 0.0;
-        case CP_SENTRY_DIAMETER_KM:   return s ? (double) s->sentry_diameter_km : 0.0;
+        case CP_SENTRY_IMPACT_PROB:   return s ? s->sentry_impact_prob : NAN;
+        case CP_SENTRY_TORINO_SCALE:  return s ? s->sentry_torino_scale : NAN;
+        case CP_SENTRY_PALERMO_SCALE: return s ? s->sentry_palermo_scale : NAN;
+        case CP_SENTRY_DIAMETER_KM:   return s ? s->sentry_diameter_km : NAN;
         default:                      return 0.0;
     }
 }
@@ -398,7 +394,7 @@ static bool nasa_get_bool(const void *dados, const char *campo){
     return bool_por_id((const ITEM_NASA*) dados, campo_id(campo));
 }
 
-//formato proprio da NASA: casas decimais por campo e "N/A" nos campos Sentry;
+//formato proprio da NASA: casas decimais por campo e "N/A" nos valores ausentes;
 static void nasa_formatar(const void *dados, const char *campo, char *dest, size_t tam_dest){
     const ITEM_NASA *a = (const ITEM_NASA*) dados;
     int id = campo_id(campo);
@@ -416,13 +412,13 @@ static void nasa_formatar(const void *dados, const char *campo, char *dest, size
         case CAMPO_BOOL:
             snprintf(dest, tam_dest, "%s", bool_por_id(a, id) ? "true" : "false");
             break;
-        case CAMPO_NUMERO:
-            if (CAMPOS[id].so_sentry && !a->on_sentry_list) {
-                snprintf(dest, tam_dest, "N/A");
-            } else {
-                snprintf(dest, tam_dest, "%.*f", CAMPOS[id].casas, num_por_id(a, id));
-            }
+        case CAMPO_NUMERO: {
+            double val = num_por_id(a, id);
+            if (isnan(val)) snprintf(dest, tam_dest, "N/A");
+            else if (CAMPOS[id].casas < 0) snprintf(dest, tam_dest, "%g", val);
+            else snprintf(dest, tam_dest, "%.*f", CAMPOS[id].casas, val);
             break;
+        }
         default:
             snprintf(dest, tam_dest, "DESCONHECIDO");
             break;

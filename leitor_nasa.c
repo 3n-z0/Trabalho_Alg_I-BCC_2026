@@ -87,8 +87,8 @@ int leitor_nasa_proximo(LEITOR_NASA *l, ITEM **item) {
         !numero(v[11], &risco) || !numero(v[16], &prob) || !numero(v[17], &torino) ||
         !numero(v[18], &palermo) || !numero(v[19], &diametro)) goto erro;
     novo = item_nasa_criar(v[0], v[1], v[2], (unsigned int)ano, (unsigned int)mes,
-        distancia, velocidade, (float)magnitude, (int)dias, passado, futuro, risco,
-        (unsigned int)panico, v[13], v[14], sentry, v[16], (float)torino, (float)palermo, (float)diametro);
+        distancia, velocidade, magnitude, (int)dias, passado, futuro, risco,
+        (unsigned int)panico, v[13], v[14], sentry, prob, torino, palermo, diametro);
     if (!novo || !item_set_linha_original(novo, linha)) goto erro;
     free(copia); free(linha); *item = novo;
     return 1;

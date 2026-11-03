@@ -19,7 +19,7 @@
         unsigned int month,
         double distance_au,
         double velocity_km_s,
-        float absolute_magnitude,
+        double absolute_magnitude,
         int days_until_approach,
         bool is_past_event,
         bool is_future_event,
@@ -28,10 +28,10 @@
         const char *threat_category,
         const char *panic_verdict,
         bool on_sentry_list,
-        const char *sentry_impact_prob,
-        float sentry_torino_scale,
-        float sentry_palermo_scale,
-        float sentry_diameter_km
+        double sentry_impact_prob,
+        double sentry_torino_scale,
+        double sentry_palermo_scale,
+        double sentry_diameter_km
     );
 
 //getters especificos; devolvem NULL/0 se o ITEM for NULL ou nao for da NASA;
@@ -45,7 +45,7 @@
     unsigned int item_get_month(const ITEM *item);
     double item_get_distance_au(const ITEM *item);
     double item_get_velocity_km_s(const ITEM *item);
-    float item_get_absolute_magnitude(const ITEM *item);
+    double item_get_absolute_magnitude(const ITEM *item);
     int item_get_days_until_approach(const ITEM *item);
     bool item_get_is_past_event(const ITEM *item);
     bool item_get_is_future_event(const ITEM *item);
@@ -53,8 +53,9 @@
     unsigned int item_get_panic_level(const ITEM *item);
     bool item_get_on_sentry_list(const ITEM *item);
 
-    const char *item_get_sentry_impact_prob(const ITEM *item);
-    float item_get_sentry_torino_scale(const ITEM *item);
-    float item_get_sentry_palermo_scale(const ITEM *item);
-    float item_get_sentry_diameter_km(const ITEM *item);
+    //campos Sentry: NaN se o asteroide nao estiver na lista Sentry (ausente);
+    double item_get_sentry_impact_prob(const ITEM *item);
+    double item_get_sentry_torino_scale(const ITEM *item);
+    double item_get_sentry_palermo_scale(const ITEM *item);
+    double item_get_sentry_diameter_km(const ITEM *item);
 #endif

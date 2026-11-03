@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include "estrutura.h"
@@ -26,11 +27,20 @@ static bool definido(const char *s) { return s && *s; }
 
 /* Chave de agrupamento (GROUP/CROSS) ou de ordenacao textual. Campo de texto:
  * devolve o proprio texto do ITEM, sem copia e sem limite de tamanho ("N/A" se
- * ausente). Demais tipos: formata em buf, que comporta qualquer numero/bool. */
+ * ausente). Numero: %.17g identifica o double exato, entao valores diferentes
+ * nunca caem no mesmo grupo por arredondamento (0.12341 e 0.12344 nao viram
+ * 0.1234). Bool: formata em buf. buf comporta qualquer numero/bool. */
 static const char *chave_do_campo(const ITEM *item, const char *campo, char *buf, size_t tam) {
-    if (item_campo_tipo(campo) == CAMPO_TEXTO) {
+    TIPO_CAMPO tipo = item_campo_tipo(campo);
+    if (tipo == CAMPO_TEXTO) {
         const char *texto = item_get_campo_texto(item, campo);
         return texto ? texto : "N/A";
+    }
+    if (tipo == CAMPO_NUMERO) {
+        double valor = item_get_campo_num(item, campo);
+        if (isnan(valor)) snprintf(buf, tam, "N/A");
+        else snprintf(buf, tam, "%.17g", valor);
+        return buf;
     }
     item_get_campo_str(item, campo, buf, tam);
     return buf;
