@@ -3,7 +3,7 @@
 #include "item.h"
 #include "leitor.h"
 
-/* Leitor do CSV da STI (Policia Federal): separador ';', Latin-1, CRLF e
+/* Leitor do CSV da STI (Policia Federal): separador ';', Windows-1252, CRLF e
  * cabecalho UF_ATENDIMENTO;TIPO;CLASSIFICACAO;NACIONALIDADE;TOTAL. Os textos
  * nao sao convertidos: a saida usa a linha original, no mesmo formato. */
 typedef struct leitor_sti_ LEITOR_STI;

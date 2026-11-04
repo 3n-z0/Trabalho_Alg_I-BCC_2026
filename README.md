@@ -4,7 +4,22 @@ Esse é o projeto da disciplina de Algoritmos e Estruturas de Dados do curso de 
 O programa carrega um CSV em uma estrutura de dados (a **base**), avalia uma consulta sobre cada registro e insere os aprovados em uma segunda estrutura (o **resultado**), que define a ordem da exportação. Os mesmos oito TADs atendem aos dois domínios:
 
 - **Parte 1 – NASA:** aproximações de asteroides (`dados/asteroids.csv`, separador `,`, 20 colunas).
-- **Parte 2 – STI:** movimentos migratórios do Sistema de Tráfego Internacional da Polícia Federal (`dados/sti.csv`, separador `;`, Latin-1, CRLF, 5 colunas).
+- **Parte 2 – STI:** movimentos migratórios do Sistema de Tráfego Internacional da Polícia Federal (`dados/sti.csv`, separador `;`, Windows-1252, CRLF, 5 colunas).
+
+## Dados
+
+| | NASA (`dados/asteroids.csv`) | STI (`dados/sti.csv`) |
+|---|---|---|
+| Registros (sem cabeçalho) | 89.227 | 11.683 (soma de `TOTAL`: 4.547.403) |
+| Tamanho | 16.643.706 bytes | 368.170 bytes |
+| Codificação / quebra de linha | ASCII (só bytes < 128) / CRLF | Windows-1252 / CRLF |
+| SHA-256 | `be86bc6c2f1fb8670faa691d050c7900f67b2f851bd612f7ed5277cd5c3e54d6` | `1ecdb13cb54689da72d04277be61f92c0a2c6a7612ef0a8a6a52c82979cd7f0a` |
+| Cobertura | aproximações de 2020-01-01 a 2100-12-30 | período: **[preencher]** |
+| Origem | arquivo do e-Disciplinas — conferência: **[preencher]** | Dados abertos da Polícia Federal — URL exata: **[preencher]** |
+| Catálogo | — | referência em dados.gov.br: **[preencher]** |
+| Reserva na planilha da turma | — | **[preencher]** |
+
+Na STI, `NACIONALIDADE` vem vazia em 19 registros; `TOTAL` não tem vazios.
 
 ## Compilação
 
@@ -45,22 +60,29 @@ Um comando por linha, campos separados por `|`; os nomes de campo são os do cab
 | `FILTER\|campo\|op\|valor` | todos os filtros precisam ser satisfeitos; `op` ∈ `== != < <= > >=` (texto e booleano só `==` e `!=`) |
 | `SIM\|campo\|alvo\|tolerância\|peso` | similaridade `max(0, 1 - \|x - alvo\| / tolerância)`, combinada por média ponderada |
 | `ACCEPT\|limiar` | aceita só registros com similaridade ≥ limiar |
-| `ORDER\|campo\|ASC\|DESC` | chave da `lista_ord` (`campo` pode ser `similarity`) |
+| `ORDER\|campo\|ASC` ou `ORDER\|campo\|DESC` | chave da `lista_ord` (`campo` pode ser `similarity`) |
 | `GROUP\|campo1\|campo2` | chaves da `lista_gen` (grupos e subgrupos) |
 | `CROSS\|campo1\|campo2` | linha e coluna da `lista_cruz` (exportada pelo percurso por linhas) |
 
-`lista_ord`, `lista_gen` e `lista_cruz` exigem, respectivamente, `ORDER`, `GROUP` e `CROSS` na consulta. As demais estruturas preservam a ordem em que a busca encontrou os registros.
+`lista_ord`, `lista_gen` e `lista_cruz` exigem, respectivamente, `ORDER`, `GROUP` e `CROSS` na consulta. A `pilha` percorre em ordem inversa de inserção; `fila`, `lista_seq`, `lista_enc` e `lista_cabeca` percorrem na ordem de inserção. Como a busca percorre a base, uma base `pilha` também inverte a ordem em que os registros chegam ao resultado.
 
 ### Valores ausentes
 
-Um campo vazio no CSV é **ausente**, distinto de `0`, `false` ou de qualquer texto:
+Um campo vazio no CSV é **ausente**. O tratamento depende do tipo do campo, consultado pela interface genérica (`item_get_campo_*`, `item_campo_ausente`) que a consulta usa:
 
-- comparações em `FILTER` são falsas, exceto `!=`, que é verdadeira;
+**Números e booleanos** — o ausente é distinto de `0` e de `false`:
+
+- comparações em `FILTER` são falsas, exceto `!=`, que é verdadeira (ex.: `year` vazio não satisfaz `year == 0`);
 - em `SIM` o campo contribui com similaridade 0;
 - em `ORDER` numérico o registro vai para o fim;
 - em `GROUP`/`CROSS` a chave é `N/A`.
 
-Na NASA, os campos `sentry_*` são ausentes quando `on_sentry_list` é falso. Na STI, `NACIONALIDADE` vazia é ausente.
+**Textos** — o ausente é tratado como string vazia:
+
+- em `FILTER`, `campo==` (valor vazio) aceita o registro ausente, e `!=` com qualquer texto não vazio também o aceita;
+- em `GROUP`/`CROSS` a chave é vazia na NASA (separada de um texto literal `N/A`) e `N/A` na STI (`NACIONALIDADE`).
+
+Na NASA, os campos `sentry_*` são ausentes quando `on_sentry_list` é falso. Os getters específicos de cada dataset (`item_get_year`, `item_get_is_future_event`...) continuam devolvendo o valor armazenado (0/`false` para vazios); a política acima vale para a interface genérica.
 
 ## Módulos
 
@@ -122,7 +144,7 @@ OUTPUT_RECORDS=986
 2020 CA,       (2020 CA),2020-02-02 15:49:00,2020,2,0.0014655652786794,13.2600419467177,29.6,-2086,True,False,0.5598123478332484,6,CONCERN,Time to learn survival skills?,True,1.13726e-06,0.0,-8.38,0.0041
 ```
 
-#### 2. Aproximações a menos de 0,01 UA em MONITOR, da mais próxima à mais distante
+#### 2. Aproximações de até 0,01 UA em MONITOR, da mais próxima à mais distante
 
 ```bash
 ./trabalho --reader nasa --input dados/asteroids.csv --base lista_enc --result lista_ord --query consultas/q2.txt --output resultado.csv
@@ -183,7 +205,7 @@ OUTPUT_RECORDS=5
 
 ### Parte 2 – STI
 
-O arquivo da STI está em Latin-1; as linhas abaixo foram convertidas para UTF-8 apenas para exibição. A saída é gravada na codificação original.
+O arquivo da STI está em Windows-1252 (não Latin-1 estrito: a linha 6.054, `CÔTE D’IVOIRE`, usa o byte `0x92` como apóstrofo). As linhas abaixo foram convertidas para UTF-8 apenas para exibição; a saída conserva os bytes originais.
 
 #### 4. Entradas cruzadas por UF e classificação
 
@@ -214,7 +236,7 @@ AC;ENTRADA;PERMANENTE;BOLÍVIA;65
 AC;ENTRADA;PERMANENTE;CHILE;3
 ```
 
-#### 5. Visitantes com movimento próximo de 1.000 pessoas, por similaridade
+#### 5. Visitantes com TOTAL próximo de 1.000 movimentos, por similaridade
 
 ```bash
 ./trabalho --reader sti --input dados/sti.csv --base fila --result lista_ord --query consultas/sti_q3.txt --output resultado_sti.csv

@@ -14,7 +14,7 @@ typedef struct
     char *tipo;           //ENTRADA ou SAIDA;
     char *classificacao;  //PERMANENTE, TEMPORARIO, VISITANTE ou OUTROS;
     char *nacionalidade;  //"" quando ausente na base;
-    double total;         //quantidade de pessoas no movimento;
+    double total;         //quantidade de movimentos (nao identifica pessoas distintas);
 }ITEM_STI;
 
 //copia do texto no tamanho exato; NULL vira "";
