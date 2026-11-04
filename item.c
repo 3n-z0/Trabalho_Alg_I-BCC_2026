@@ -114,6 +114,15 @@ bool item_get_campo_bool(const ITEM *item, const char *campo){
     return item->ops->get_bool(item->dados, campo);
 }
 
+bool item_campo_ausente(const ITEM *item, const char *campo){
+    TIPO_CAMPO tipo = tipo_no_item(item, campo);
+    if(tipo == CAMPO_DESCONHECIDO) return false;
+    if(item->ops->ausente != NULL && item->ops->ausente(item->dados, campo)) return true;
+    if(tipo == CAMPO_TEXTO) return item->ops->get_texto(item->dados, campo) == NULL;
+    if(tipo == CAMPO_NUMERO) return isnan(item->ops->get_num(item->dados, campo));
+    return false;
+}
+
 void item_get_campo_str(const ITEM *item, const char *campo, char *dest, size_t tam_dest){
     if(dest == NULL || tam_dest == 0) return;
 

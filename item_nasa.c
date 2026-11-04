@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <math.h>
+#include <stdint.h>
 #include "item.h"
 #include "item_nasa.h"
 
@@ -43,6 +44,8 @@ typedef struct
     bool on_sentry_list;
     bool is_past_event;
     bool is_future_event;
+
+    uint32_t ausentes; //bit i: campo i de ID_CAMPO veio vazio no CSV (CP_QTD <= 32);
 }ITEM_NASA;
 
 //copia do texto no tamanho exato; NULL vira "" para os getters nunca devolverem NULL;
@@ -333,6 +336,20 @@ static int campo_id(const char *campo){
     return -1;
 }
 
+//bit do campo em ausentes; false para id invalido;
+static bool ausente_por_id(const ITEM_NASA *a, int id){
+    return id >= 0 && (a->ausentes & ((uint32_t)1 << id)) != 0;
+}
+
+void item_nasa_marcar_ausente(ITEM *item, const char *campo){
+    if (nasa(item) == NULL) return;
+    int id = campo_id(campo);
+    if (id < 0) return;
+    //o ITEM e dono dos dados, criados sem const por item_nasa_criar;
+    ITEM_NASA *a = (ITEM_NASA*) item_get_dados(item);
+    a->ausentes |= (uint32_t)1 << id;
+}
+
 static const char *texto_por_id(const ITEM_NASA *a, int id){
     switch (id) {
         case CP_ASTEROID_DESIGNATION: return a->asteroid_designation;
@@ -347,6 +364,7 @@ static const char *texto_por_id(const ITEM_NASA *a, int id){
 static double num_por_id(const ITEM_NASA *a, int id){
     //campos Sentry sao ausentes (NaN) fora da lista Sentry, como nos getters especificos;
     const SentryInfo *s = (a->on_sentry_list && a->sentry_info) ? a->sentry_info : NULL;
+    if (ausente_por_id(a, id)) return NAN; //inteiro vazio nao vira 0;
 
     switch (id) {
         case CP_YEAR:                 return (double) a->year;
@@ -394,6 +412,10 @@ static bool nasa_get_bool(const void *dados, const char *campo){
     return bool_por_id((const ITEM_NASA*) dados, campo_id(campo));
 }
 
+static bool nasa_ausente(const void *dados, const char *campo){
+    return ausente_por_id((const ITEM_NASA*) dados, campo_id(campo));
+}
+
 //formato proprio da NASA: casas decimais por campo e "N/A" nos valores ausentes;
 static void nasa_formatar(const void *dados, const char *campo, char *dest, size_t tam_dest){
     const ITEM_NASA *a = (const ITEM_NASA*) dados;
@@ -410,7 +432,8 @@ static void nasa_formatar(const void *dados, const char *campo, char *dest, size
             break;
         }
         case CAMPO_BOOL:
-            snprintf(dest, tam_dest, "%s", bool_por_id(a, id) ? "true" : "false");
+            if (ausente_por_id(a, id)) snprintf(dest, tam_dest, "N/A");
+            else snprintf(dest, tam_dest, "%s", bool_por_id(a, id) ? "true" : "false");
             break;
         case CAMPO_NUMERO: {
             double val = num_por_id(a, id);
@@ -432,5 +455,6 @@ const ITEM_OPS ITEM_OPS_NASA = {
     nasa_get_num,
     nasa_get_bool,
     nasa_formatar,
-    nasa_apagar
+    nasa_apagar,
+    nasa_ausente
 };

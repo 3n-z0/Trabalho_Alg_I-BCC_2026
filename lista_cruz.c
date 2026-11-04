@@ -109,6 +109,58 @@ bool lista_cruz_inserir(LISTA_CRUZ *lc, ITEM *item, const char* lin, const char*
     return true;
 }
 
+//encadeamento da celula no eixo pedido: direita (linha) ou abaixo (coluna);
+static CELULA **ligacao(CELULA *cel, bool por_linha){
+    return por_linha ? &cel->direita : &cel->abaixo;
+}
+
+/* Desliga alvo do cabecalho (linha ou coluna) que o contem, ajustando
+ * primeiro/ultimo; o cabecalho que ficar vazio e liberado. */
+static void desligar(CABECALHO **cabecalhos, CELULA *alvo, bool por_linha){
+    CABECALHO *cab_anterior = NULL;
+    for(CABECALHO *cab = *cabecalhos; cab != NULL; cab_anterior = cab, cab = cab->prox){
+        CELULA *anterior = NULL;
+        for(CELULA *cel = cab->primeiro; cel != NULL; anterior = cel, cel = *ligacao(cel, por_linha)){
+            if(cel != alvo) continue;
+
+            CELULA *seguinte = *ligacao(cel, por_linha);
+            if(anterior == NULL) cab->primeiro = seguinte;
+            else *ligacao(anterior, por_linha) = seguinte;
+            if(cab->ultimo == cel) cab->ultimo = anterior;
+
+            if(cab->primeiro == NULL){
+                if(cab_anterior == NULL) *cabecalhos = cab->prox;
+                else cab_anterior->prox = cab->prox;
+                free(cab->chave);
+                free(cab);
+            }
+            return;
+        }
+    }
+}
+
+bool lista_cruz_remover(LISTA_CRUZ *lc, const ITEM *item){
+    if(lc == NULL || item == NULL) return false;
+
+    CELULA *alvo = NULL;
+    for(CABECALHO *lin = lc->linhas; lin != NULL && alvo == NULL; lin = lin->prox){
+        for(CELULA *cel = lin->primeiro; cel != NULL; cel = cel->direita){
+            if(cel->item == item){
+                alvo = cel;
+                break;
+            }
+        }
+    }
+    if(alvo == NULL) return false;
+
+    //a mesma celula esta nos dois eixos: desliga de ambos antes de liberar;
+    desligar(&lc->linhas, alvo, true);
+    desligar(&lc->colunas, alvo, false);
+    free(alvo);
+    lc->qtd_itens--;
+    return true;
+}
+
 void lista_cruz_apagar(LISTA_CRUZ **lc){
     if(lc == NULL || *lc == NULL) return;
 

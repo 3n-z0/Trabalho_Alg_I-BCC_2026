@@ -362,6 +362,8 @@ static bool filtro_aceita(const RegraFiltro *f, const ITEM *item){
         case CAMPO_NUMERO:
             return comparar_numero(item_get_campo_num(item, f->campo), f->op, f->valor_num);
         case CAMPO_BOOL: {
+            //ausente, como NaN nos numeros: so satisfaz !=;
+            if(item_campo_ausente(item, f->campo)) return f->op == OP_DIFERENTE;
             bool iguais = item_get_campo_bool(item, f->campo) == f->valor_bool;
             return f->op == OP_IGUAL ? iguais : !iguais;
         }

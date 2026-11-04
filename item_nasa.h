@@ -34,6 +34,11 @@
         double sentry_diameter_km
     );
 
+    //marca um campo como vazio no CSV (ausente); usado pelo leitor logo apos
+    //item_nasa_criar. Numeros ausentes passam a valer NaN e booleanos ausentes
+    //nao satisfazem == em FILTER. Os getters especificos abaixo nao mudam;
+    void item_nasa_marcar_ausente(ITEM *item, const char *campo);
+
 //getters especificos; devolvem NULL/0 se o ITEM for NULL ou nao for da NASA;
     const char *item_get_asteroid_designation(const ITEM *item);
     const char *item_get_asteroid_fullname(const ITEM *item);

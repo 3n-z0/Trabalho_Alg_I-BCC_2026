@@ -181,5 +181,6 @@ const ITEM_OPS ITEM_OPS_STI = {
     sti_get_num,
     sti_get_bool,
     NULL,
-    sti_apagar
+    sti_apagar,
+    NULL //ausente: nacionalidade vazia ja vira NULL em sti_get_texto;
 };

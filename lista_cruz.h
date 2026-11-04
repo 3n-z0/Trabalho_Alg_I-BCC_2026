@@ -12,6 +12,12 @@
 
     bool lista_cruz_inserir(LISTA_CRUZ *lc, ITEM *item, const char *lin, const char *col);
 
+    /* Remove a primeira celula (no percurso por linhas) que guarda item,
+     * desligando-a da sua linha e da sua coluna; linha ou coluna que ficar
+     * vazia sai da lista. O ITEM nao e liberado (pertence a base).
+     * Falso se item nao estiver na lista. */
+    bool lista_cruz_remover(LISTA_CRUZ *lc, const ITEM *item);
+
     /* Cada celula pertence a uma linha (chave lin) e a uma coluna (chave col)
      * ao mesmo tempo, sem duplicar o ITEM: os dois percursos abaixo visitam
      * os mesmos registros, em organizacoes diferentes. Em ambos, cada celula

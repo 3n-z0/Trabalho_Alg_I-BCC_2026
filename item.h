@@ -29,6 +29,9 @@
         //opcional (pode ser NULL): formatacao propria em texto (casas decimais, "N/A"...);
         void (*formatar)(const void *dados, const char *campo, char *dest, size_t tam);
         void (*apagar_dados)(void *dados);
+        //opcional (pode ser NULL): true se o campo veio vazio no CSV; necessario
+        //para bool, que nao tem valor reservado (numero ausente ja e NaN);
+        bool (*ausente)(const void *dados, const char *campo);
     } ITEM_OPS;
 
     //dataset da execucao; a main define a partir de --reader, antes de query_criar;
@@ -56,6 +59,10 @@
     const char *item_get_campo_texto(const ITEM *item, const char *campo);
     double item_get_campo_num(const ITEM *item, const char *campo);
     bool item_get_campo_bool(const ITEM *item, const char *campo);
+
+    //true se o campo existe e esta ausente: texto NULL, numero NaN ou
+    //marcado como ausente pelo dataset (ex.: booleano vazio no CSV);
+    bool item_campo_ausente(const ITEM *item, const char *campo);
 
     //valor de qualquer campo formatado como texto, para chaves de GROUP,
     //CROSS e ORDER textual; "N/A" se ausente, "DESCONHECIDO" se nao existir;

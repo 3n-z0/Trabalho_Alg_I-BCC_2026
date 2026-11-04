@@ -90,6 +90,10 @@ int leitor_nasa_proximo(LEITOR_NASA *l, ITEM **item) {
         distancia, velocidade, magnitude, (int)dias, passado, futuro, risco,
         (unsigned int)panico, v[13], v[14], sentry, prob, torino, palermo, diametro);
     if (!novo || !item_set_linha_original(novo, linha)) goto erro;
+    /* Coluna vazia e ausente: inteiro/bool vazio nao se confunde com 0/false. */
+    for (size_t i = 0; i < NUM_COLUNAS; i++) {
+        if (!*v[i]) item_nasa_marcar_ausente(novo, colunas[i]);
+    }
     free(copia); free(linha); *item = novo;
     return 1;
 erro:
