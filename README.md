@@ -14,10 +14,10 @@ O programa carrega um CSV em uma estrutura de dados (a **base**), avalia uma con
 | Tamanho | 16.643.706 bytes | 368.170 bytes |
 | Codificação / quebra de linha | ASCII (só bytes < 128) / CRLF | Windows-1252 / CRLF |
 | SHA-256 | `be86bc6c2f1fb8670faa691d050c7900f67b2f851bd612f7ed5277cd5c3e54d6` | `1ecdb13cb54689da72d04277be61f92c0a2c6a7612ef0a8a6a52c82979cd7f0a` |
-| Cobertura | aproximações de 2020-01-01 a 2100-12-30 | período: **[preencher]** |
-| Origem | arquivo do e-Disciplinas — conferência: **[preencher]** | Dados abertos da Polícia Federal — URL exata: **[preencher]** |
-| Catálogo | — | referência em dados.gov.br: **[preencher]** |
-| Reserva na planilha da turma | — | **[preencher]** |
+| Cobertura | aproximações de 2020-01-01 a 2100-12-30 | movimentos de janeiro de 2026 |
+| Origem | arquivo do e-Disciplinas — conferência: **[preencher]** | Dados abertos da Polícia Federal: arquivo `STI_2026_01.csv` do diretório de arquivos mensais <https://servicos.dpf.gov.br/dadosabertos/STI/> (recurso CSV do catálogo) |
+| Catálogo | — | [STI - Sistema de tráfego internacional](https://dados.gov.br/dados/conjuntos-dados/sti---sistema-de-trafego-internacional), dados.gov.br (id `1aa1685d-833f-4c96-853e-2dccb1f9358d`; área técnica DIGED/CGTI/DTI/PF; licença CC0; atualização mensal) |
+| Reserva na planilha da turma | — | reservado pelo grupo 39 em 26/10/2026 |
 
 Na STI, `NACIONALIDADE` vem vazia em 19 registros; `TOTAL` não tem vazios.
 
