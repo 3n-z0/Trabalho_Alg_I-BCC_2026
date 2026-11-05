@@ -1,0 +1,10 @@
+# Compilação (make gera de novo)
+*.o
+trabalho
+
+# Saídas do programa (--output)
+resultado*.csv
+exemplo_*.csv
+
+# macOS
+.DS_Store
